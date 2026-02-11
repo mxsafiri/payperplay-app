@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Users, Palette } from "lucide-react";
 
 type UserRole = "creator" | "fan";
 
@@ -97,23 +98,31 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-secondary-900 to-neutral-900 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">
-              {step === "account" && "Create Account"}
-              {step === "role" && "Choose Your Role"}
-              {step === "profile" && "Complete Your Profile"}
-            </h1>
-            <p className="text-muted-foreground">
-              {step === "account" && "Join PayPerPlay today"}
-              {step === "role" && "Are you a creator or a fan?"}
-              {step === "profile" && "Set up your profile"}
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen relative flex items-center justify-center px-4">
+      {/* Background */}
+      <div className="fixed inset-0 z-0">
+        <Image src="/BG.jpg" alt="" fill className="object-cover" sizes="100vw" priority />
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-purple-900/20" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-card/80 backdrop-blur-xl shadow-2xl p-8">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+        <div className="relative">
+        <div className="text-center space-y-2 mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {step === "account" && "Create Account"}
+            {step === "role" && "Choose Your Role"}
+            {step === "profile" && "Complete Your Profile"}
+          </h1>
+          <p className="text-muted-foreground">
+            {step === "account" && "Join PayPerPlay today"}
+            {step === "role" && "Are you a creator or a fan?"}
+            {step === "profile" && "Set up your profile"}
+          </p>
+        </div>
           {error && (
             <div className="mb-4 p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
               {error}
@@ -192,7 +201,7 @@ export default function SignupPage() {
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="text-4xl mb-2">🎭</div>
+                  <Users className="w-8 h-8 text-blue-400 mb-2" />
                   <div className="font-semibold">Fan</div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Discover & support creators
@@ -207,7 +216,7 @@ export default function SignupPage() {
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="text-4xl mb-2">🎨</div>
+                  <Palette className="w-8 h-8 text-amber-400 mb-2" />
                   <div className="font-semibold">Creator</div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Share exclusive content
@@ -256,8 +265,8 @@ export default function SignupPage() {
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
