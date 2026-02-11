@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+// Using custom glass cards instead of Card component
 
 const CATEGORIES = [
   "Music",
@@ -92,20 +92,26 @@ export default function CreateContentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Subtle grid background */}
+      <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(128,128,128,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.05) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+      <div className="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none" />
+
+      {/* Header — frosted glass */}
+      <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-xl bg-background/60">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               onClick={() => router.back()}
               disabled={loading}
+              className="hover:bg-white/10"
             >
               ← Back
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Create New Content</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Create New Content</h1>
               <p className="text-sm text-muted-foreground">
                 Share exclusive content with your fans
               </p>
@@ -114,7 +120,7 @@ export default function CreateContentPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             {error && (
@@ -124,11 +130,12 @@ export default function CreateContentPage() {
             )}
 
             {/* Basic Info */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-lg font-semibold">Basic Information</h2>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+              <div className="relative p-6">
+                <h2 className="text-lg font-semibold tracking-tight mb-4">Basic Information</h2>
+                <div className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="title" className="text-sm font-medium">
                     Title *
@@ -175,15 +182,16 @@ export default function CreateContentPage() {
                     ))}
                   </select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Content Type */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-lg font-semibold">Content Type</h2>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+              <div className="relative p-6">
+                <h2 className="text-lg font-semibold tracking-tight mb-4">Content Type</h2>
+                <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
@@ -239,18 +247,19 @@ export default function CreateContentPage() {
                     </p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Pricing */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-lg font-semibold">Pricing</h2>
-                <p className="text-sm text-muted-foreground">
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+              <div className="relative p-6">
+                <h2 className="text-lg font-semibold tracking-tight mb-1">Pricing</h2>
+                <p className="text-sm text-muted-foreground mb-4">
                   Set how much fans pay to access this content
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                <div className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <input
@@ -325,8 +334,8 @@ export default function CreateContentPage() {
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Actions */}
             <div className="flex items-center justify-between">
@@ -350,7 +359,7 @@ export default function CreateContentPage() {
                 >
                   Save as Draft
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading} className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]">
                   {loading ? "Creating..." : "Publish Content"}
                 </Button>
               </div>
