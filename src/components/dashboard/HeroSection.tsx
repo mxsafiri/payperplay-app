@@ -3,6 +3,7 @@ import Image from "next/image";
 
 import { Container } from "./Container";
 import { Pill } from "./Pill";
+import { Typewriter } from "@/components/ui/typewriter";
 import { placeholderCreators } from "@/data/placeholder-creators";
 
 export function HeroSection() {
@@ -32,7 +33,7 @@ export function HeroSection() {
           </div>
 
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-4xl lg:text-6xl">
-            Discover new content everyday!
+            <Typewriter text="Discover new content everyday!" speed={70} />
           </h1>
 
           <p className="mt-4 max-w-xl text-base text-neutral-700 dark:text-neutral-300 sm:text-lg">
