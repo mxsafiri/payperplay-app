@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// Using custom glass cards instead of Card component
+import { Youtube, Upload, ArrowLeft } from "lucide-react";
 
 const CATEGORIES = [
   "Music",
@@ -108,7 +108,7 @@ export default function CreateContentPage() {
               disabled={loading}
               className="hover:bg-white/10"
             >
-              ← Back
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Create New Content</h1>
@@ -204,7 +204,7 @@ export default function CreateContentPage() {
                         : "border-border hover:border-primary/50"
                     }`}
                   >
-                    <div className="text-3xl mb-2">🎥</div>
+                    <Youtube className="w-8 h-8 text-red-500 mb-2" />
                     <div className="font-semibold">YouTube Early Access</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Share YouTube videos before they go public
@@ -221,7 +221,7 @@ export default function CreateContentPage() {
                         : "border-border hover:border-primary/50"
                     } opacity-50 cursor-not-allowed`}
                   >
-                    <div className="text-3xl mb-2">📤</div>
+                    <Upload className="w-8 h-8 text-muted-foreground mb-2" />
                     <div className="font-semibold">Upload</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Coming soon

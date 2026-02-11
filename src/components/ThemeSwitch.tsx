@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Moon, Sun } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 
@@ -48,7 +49,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
       aria-label="Toggle theme"
       aria-pressed={theme === "dark"}
     >
-      <span className="text-base leading-none">{theme === "dark" ? "🌙" : "☀️"}</span>
+      {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
       <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
     </button>
   );

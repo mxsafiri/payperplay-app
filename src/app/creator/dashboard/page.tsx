@@ -3,15 +3,23 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { Package, Rocket, Eye, Coins, Film, Plus, Pencil } from "lucide-react";
 
 interface CreatorStats {
   totalContent: number;
   publishedContent: number;
   totalEarnings: number;
   totalViews: number;
+}
+
+interface MediaItem {
+  id: string;
+  mediaType: string;
+  url: string | null;
 }
 
 interface ContentItem {
@@ -22,6 +30,7 @@ interface ContentItem {
   priceTzs: number;
   viewCount: number;
   createdAt: string;
+  media?: MediaItem[];
 }
 
 export default function CreatorDashboard() {
@@ -102,11 +111,15 @@ export default function CreatorDashboard() {
                 Manage your content and earnings
               </p>
             </div>
-            <Link href="/creator/content/new">
-              <Button className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]">
-                + Create Content
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <ThemeSwitch />
+              <Link href="/creator/content/new">
+                <Button className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]">
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Create Content
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -115,10 +128,10 @@ export default function CreatorDashboard() {
         {/* Stats Grid — glassmorphism cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           {[
-            { label: "Total Content", value: stats?.totalContent || 0, icon: "📦", gradient: "from-blue-500/10 to-cyan-500/10", border: "border-blue-500/20" },
-            { label: "Published", value: stats?.publishedContent || 0, icon: "🚀", gradient: "from-green-500/10 to-emerald-500/10", border: "border-green-500/20" },
-            { label: "Total Views", value: stats?.totalViews || 0, icon: "👁️", gradient: "from-purple-500/10 to-pink-500/10", border: "border-purple-500/20" },
-            { label: "Total Earnings", value: stats?.totalEarnings || 0, icon: "💰", gradient: "from-amber-500/10 to-orange-500/10", border: "border-amber-500/20", suffix: "TZS" },
+            { label: "Total Content", value: stats?.totalContent || 0, icon: Package, iconColor: "text-blue-400", gradient: "from-blue-500/10 to-cyan-500/10", border: "border-blue-500/20" },
+            { label: "Published", value: stats?.publishedContent || 0, icon: Rocket, iconColor: "text-green-400", gradient: "from-green-500/10 to-emerald-500/10", border: "border-green-500/20" },
+            { label: "Total Views", value: stats?.totalViews || 0, icon: Eye, iconColor: "text-purple-400", gradient: "from-purple-500/10 to-pink-500/10", border: "border-purple-500/20" },
+            { label: "Total Earnings", value: stats?.totalEarnings || 0, icon: Coins, iconColor: "text-amber-400", gradient: "from-amber-500/10 to-orange-500/10", border: "border-amber-500/20", suffix: "TZS" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -131,7 +144,7 @@ export default function CreatorDashboard() {
               <div className="relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
-                  <span className="text-xl">{stat.icon}</span>
+                  <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
                 </div>
                 <div className="text-3xl font-bold tracking-tight">
                   {stat.value.toLocaleString()}
@@ -164,7 +177,7 @@ export default function CreatorDashboard() {
             {recentContent.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center backdrop-blur-sm">
-                  <span className="text-3xl">🎬</span>
+                  <Film className="w-8 h-8 text-amber-400" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">No content yet</h3>
                 <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
@@ -178,16 +191,26 @@ export default function CreatorDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentContent.map((item) => (
+                {recentContent.map((item) => {
+                  const thumb = item.media?.find((m) => m.mediaType === "thumbnail")?.url;
+                  return (
                   <div
                     key={item.id}
-                    className="group relative flex items-center justify-between p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:shadow-lg"
+                    className="group relative flex items-center gap-4 p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:shadow-lg"
                   >
-                    {/* Hover gloss */}
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-                    <div className="relative flex-1">
-                      <h3 className="font-semibold">{item.title}</h3>
+                    {/* Thumbnail */}
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 flex items-center justify-center">
+                      {thumb ? (
+                        <Image src={thumb} alt={item.title} fill className="object-cover" sizes="64px" />
+                      ) : (
+                        <Film className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+
+                    <div className="relative flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">{item.title}</h3>
                       <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                         <span className="px-2 py-0.5 rounded-md bg-white/5 text-xs">{item.category}</span>
                         <span>{item.viewCount} views</span>
@@ -208,12 +231,14 @@ export default function CreatorDashboard() {
                       </span>
                       <Link href={`/creator/content/${item.id}/edit`}>
                         <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/10 hover:border-white/20 transition-all">
+                          <Pencil className="w-3.5 h-3.5 mr-1" />
                           Edit
                         </Button>
                       </Link>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

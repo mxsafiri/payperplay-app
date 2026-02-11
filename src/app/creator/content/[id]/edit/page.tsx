@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { Eye, Heart, MessageCircle, ArrowLeft, Film, Plus } from "lucide-react";
+
+interface MediaItem {
+  id: string;
+  mediaType: string;
+  url: string | null;
+}
 
 interface ContentItem {
   id: string;
@@ -18,6 +26,7 @@ interface ContentItem {
   commentCount: number;
   publishedAt: string | null;
   createdAt: string;
+  media?: MediaItem[];
 }
 
 export default function ContentEditPage() {
@@ -80,7 +89,7 @@ export default function ContentEditPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => router.push("/creator/dashboard")} className="hover:bg-white/10">
-                ← Back
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">{content.title}</h1>
@@ -105,12 +114,23 @@ export default function ContentEditPage() {
       </header>
 
       <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Thumbnail preview */}
+        {(() => {
+          const thumb = content.media?.find((m) => m.mediaType === "thumbnail")?.url;
+          return thumb ? (
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-8 border border-white/10">
+              <Image src={thumb} alt={content.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 768px" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            </div>
+          ) : null;
+        })()}
+
         {/* Stats — glassmorphism */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {[
-            { label: "Views", value: content.viewCount, icon: "👁️", gradient: "from-blue-500/10 to-cyan-500/10", border: "border-blue-500/20" },
-            { label: "Likes", value: content.likeCount, icon: "❤️", gradient: "from-pink-500/10 to-rose-500/10", border: "border-pink-500/20" },
-            { label: "Comments", value: content.commentCount, icon: "💬", gradient: "from-purple-500/10 to-violet-500/10", border: "border-purple-500/20" },
+            { label: "Views", value: content.viewCount, icon: Eye, iconColor: "text-blue-400", gradient: "from-blue-500/10 to-cyan-500/10", border: "border-blue-500/20" },
+            { label: "Likes", value: content.likeCount, icon: Heart, iconColor: "text-pink-400", gradient: "from-pink-500/10 to-rose-500/10", border: "border-pink-500/20" },
+            { label: "Comments", value: content.commentCount, icon: MessageCircle, iconColor: "text-purple-400", gradient: "from-purple-500/10 to-violet-500/10", border: "border-purple-500/20" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -121,7 +141,7 @@ export default function ContentEditPage() {
               <div className="relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
-                  <span className="text-xl">{stat.icon}</span>
+                  <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
                 </div>
                 <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
               </div>
@@ -169,6 +189,7 @@ export default function ContentEditPage() {
           </Link>
           <Link href="/creator/content/new">
             <Button className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]">
+              <Plus className="w-4 h-4 mr-1" />
               Create Another
             </Button>
           </Link>

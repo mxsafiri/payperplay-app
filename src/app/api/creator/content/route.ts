@@ -36,6 +36,9 @@ export async function GET(req: NextRequest) {
       where: eq(content.creatorId, profile.id),
       orderBy: [desc(content.createdAt)],
       limit,
+      with: {
+        media: true,
+      },
     });
 
     return NextResponse.json({ content: contentList });
@@ -113,11 +116,26 @@ export async function POST(req: NextRequest) {
 
     // Add media if YouTube
     if (contentType === "youtube_preview" && youtubeUrl) {
-      await db.insert(contentMedia).values({
-        contentId: newContent.id,
-        mediaType: "youtube",
-        url: youtubeUrl,
-      });
+      // Extract YouTube video ID for thumbnail
+      let videoId = "";
+      try {
+        const urlObj = new URL(youtubeUrl);
+        videoId = urlObj.searchParams.get("v") || urlObj.pathname.split("/").pop() || "";
+      } catch {}
+
+      const mediaEntries: { contentId: string; mediaType: string; url: string }[] = [
+        { contentId: newContent.id, mediaType: "youtube", url: youtubeUrl },
+      ];
+
+      if (videoId) {
+        mediaEntries.push({
+          contentId: newContent.id,
+          mediaType: "thumbnail",
+          url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        });
+      }
+
+      await db.insert(contentMedia).values(mediaEntries);
     }
 
     return NextResponse.json({ content: newContent }, { status: 201 });
