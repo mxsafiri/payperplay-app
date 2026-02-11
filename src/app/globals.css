@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@config "../../tailwind.config.js";
+
+@theme inline {
+  --color-background: var(--ds-color-background);
+  --color-foreground: var(--ds-color-foreground);
+  --color-card: var(--ds-color-card);
+  --color-card-foreground: var(--ds-color-card-foreground);
+  --color-muted: var(--ds-color-muted);
+  --color-muted-foreground: var(--ds-color-muted-foreground);
+  --color-border: var(--ds-color-border);
+  --color-input: var(--ds-color-input);
+  --color-primary: var(--ds-color-primary);
+  --color-primary-foreground: var(--ds-color-primary-foreground);
+  --color-ring: var(--ds-color-ring);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--ds-color-background);
+  color: var(--ds-color-foreground);
+  font-family: var(--font-sans);
+}

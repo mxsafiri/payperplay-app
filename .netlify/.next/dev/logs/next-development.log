@@ -1,0 +1,96 @@
+[00:00:00.880] Server  LOG     ✓ Ready in 712ms
+[00:00:03.545] Browser LOG     [ChromeTransport] chromePort disconnected
+[00:00:04.737] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:04.816] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:05.499] Browser ERROR   unhandledRejection: Error: Talisman extension has not been configured yet. Please continue with onboarding.
+[00:00:05.499] Browser ERROR   unhandledRejection: Error: Talisman extension has not been configured yet. Please continue with onboarding.
+[00:00:16.433] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:52.809] Server  ERROR   BetterAuthError: Failed to initialize database adapter
+[00:01:52.809] Server  ERROR   ⨯ "unhandledRejection:" BetterAuthError: Failed to initialize database adapter
+[00:01:52.810] Server  ERROR   ⨯ "unhandledRejection: " BetterAuthError: Failed to initialize database adapter
+[00:01:53.328] Server  ERROR   ⨯ BetterAuthError: Failed to initialize database adapter
+[00:02:04.393] Server  ERROR   ⨯ BetterAuthError: Failed to initialize database adapter
+[00:02:46.330] Server  LOG     ✓ Compiled in 271ms
+[00:02:55.102] Server  WARN    2026-02-11T12:26:56.841Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
+[00:02:55.117] Server  ERROR   2026-02-11T12:26:56.856Z ERROR [Better Auth]: BetterAuthError BetterAuthError: [# Drizzle Adapter]: The model "user" was not found in the schema object. Please pass the schema directly to the adapter options.
+[00:02:55.118] Server  ERROR   # SERVER_ERROR:  BetterAuthError: [# Drizzle Adapter]: The model "user" was not found in the schema object. Please pass the schema directly to the adapter options.
+[00:07:27.977] Server  LOG     ✓ Compiled in 28ms
+[00:09:10.485] Server  ERROR   2026-02-11T12:33:12.219Z ERROR [Better Auth]: User not found {}
+[00:09:14.001] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:09:23.938] Server  ERROR   2026-02-11T12:33:25.672Z ERROR [Better Auth]: User not found {}
+[00:09:34.721] Server  ERROR   2026-02-11T12:33:36.455Z ERROR [Better Auth]: User not found {}
+[00:09:52.794] Server  ERROR   2026-02-11T12:33:54.528Z ERROR [Better Auth]: User not found {}
+[00:09:55.891] Server  ERROR   2026-02-11T12:33:57.625Z ERROR [Better Auth]: User not found {}
+[00:10:01.432] Server  ERROR   2026-02-11T12:34:03.165Z ERROR [Better Auth]: User not found {}
+[00:10:04.503] Server  ERROR   2026-02-11T12:34:06.237Z ERROR [Better Auth]: User not found {}
+[00:10:07.807] Server  ERROR   2026-02-11T12:34:09.541Z ERROR [Better Auth]: User not found {}
+[00:10:27.387] Server  ERROR   2026-02-11T12:34:29.120Z ERROR [Better Auth]: User not found {}
+[00:10:37.139] Server  ERROR   2026-02-11T12:34:38.872Z ERROR [Better Auth]: User not found {}
+[00:10:42.017] Server  ERROR   2026-02-11T12:34:43.750Z ERROR [Better Auth]: User not found {}
+[00:10:47.629] Server  ERROR   2026-02-11T12:34:49.362Z ERROR [Better Auth]: User not found {}
+[00:11:00.848] Server  ERROR   2026-02-11T12:35:02.580Z ERROR [Better Auth]: User not found {}
+[00:11:39.842] Server  ERROR   2026-02-11T12:35:41.574Z ERROR [Better Auth]: User not found {}
+[00:14:12.368] Server  ERROR   2026-02-11T12:38:14.097Z ERROR [Better Auth]: User not found {}
+[00:17:28.568] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:28.713] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:28.713] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:28.713] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:28.713] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:28.713] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:28.713] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:30.746] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:39.482] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:39.482] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:39.482] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:39.482] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:39.482] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:39.482] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:43.794] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:17:48.494] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:48.494] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:48.494] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:48.494] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:48.494] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:48.494] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:17:56.392] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:18:02.407] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:02.407] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:02.407] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:02.407] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:02.407] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:02.407] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:07.188] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:18:22.632] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:22.632] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:22.632] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:22.632] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:22.632] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:18:22.632] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:22.249] Server  LOG     ✓ Compiled in 40ms
+[00:21:39.266] Server  WARN    ⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[00:21:39.715] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:40.497] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:40.498] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:40.498] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:40.498] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:40.498] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:40.498] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:21:55.709] Server  LOG     ✓ Compiled in 26ms
+[00:22:36.512] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:27:08.217] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:27:41.181] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:29:18.422] Server  LOG     ✓ Compiled in 111ms
+[00:30:29.499] Browser LOG     [ChromeTransport] chromePort disconnected
+[00:37:58.458] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:37:58.458] Browser WARN    Image with src "/[image] - 2230049.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:37:58.458] Browser WARN    Image with src "/[image] - 2363871.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:37:58.458] Browser WARN    Image with src "/[image] - 238757.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:37:58.458] Browser WARN    Image with src "/[image] - 2527823.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:37:58.458] Browser WARN    Image with src "/[image] - 2685335.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:37:58.458] Browser WARN    Image with src "/[image] - 3147662.jpeg" has "fill" and a height value of 0. This is likely because the parent element of the image has not been styled to have a set height.
+[00:38:06.639] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:38:07.988] Server  ERROR   Content detail fetch error: Error: Failed query: select "content"."id", "content"."creator_id", "content"."title", "content"."description", "content"."category", "content"."status", "content"."content_type", "content"."price_tzs", "content"."view_count", "content"."like_count", "content"."comment_count", "content"."created_at", "content"."updated_at", "content"."published_at", "content_creator"."data" as "creator", "content_media"."data" as "media" from "content" "content" left join lateral (select json_build_array("content_creator"."id", "content_creator"."handle", "content_creator"."display_name", "content_creator"."avatar_url") as "data" from (select * from "profiles" "content_creator" where "content_creator"."id" = "content"."creator_id" limit $1) "content_creator") "content_creator" on true left join lateral (select coalesce(json_agg(json_build_array("content_media"."id", "content_media"."media_type", "content_media"."url")), '[]'::json) as "data" from "content_media" "content_media" where "content_media"."content_id" = "content"."id") "content_media" on true where "content"."id" = $2 limit $3
+params: 1,c2,1
+[00:38:08.438] Browser WARN    Image with src "/[image] - 2685335.jpeg" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[00:44:52.658] Server  ERROR   2026-02-11T13:08:54.316Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR {}

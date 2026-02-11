@@ -1,0 +1,23 @@
+{
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/signup/page": "app/(auth)/signup/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/[...all]/route": "app/api/auth/[...all]/route.js",
+  "/api/content/[id]/route": "app/api/content/[id]/route.js",
+  "/api/content/route": "app/api/content/route.js",
+  "/api/creator/content/[id]/route": "app/api/creator/content/[id]/route.js",
+  "/api/creator/content/route": "app/api/creator/content/route.js",
+  "/api/creator/stats/route": "app/api/creator/stats/route.js",
+  "/api/profile/create/route": "app/api/profile/create/route.js",
+  "/api/profile/me/route": "app/api/profile/me/route.js",
+  "/apple-icon/route": "app/apple-icon/route.js",
+  "/content/[id]/page": "app/content/[id]/page.js",
+  "/creator/content/[id]/edit/page": "app/creator/content/[id]/edit/page.js",
+  "/creator/content/new/page": "app/creator/content/new/page.js",
+  "/creator/dashboard/page": "app/creator/dashboard/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/feed/page": "app/feed/page.js",
+  "/icon/route": "app/icon/route.js",
+  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
+  "/page": "app/page.js"
+}
