@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         mediaEntries.push({
           contentId: newContent.id,
           mediaType: "thumbnail",
-          url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
         });
       }
 
