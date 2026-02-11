@@ -60,31 +60,60 @@ export function PhoneMockup() {
 
   useEffect(() => {
     if (!ref.current) return;
+    let cancelled = false;
+    let timers: ReturnType<typeof setTimeout>[] = [];
+
+    const schedule = (fn: () => void, ms: number) => {
+      const t = setTimeout(() => { if (!cancelled) fn(); }, ms);
+      timers.push(t);
+    };
+
+    const runCycle = () => {
+      if (cancelled) return;
+      timers = [];
+
+      // Reset everything
+      setVisibleCount(0);
+      setShowHeart(false);
+      setShowThumb(false);
+
+      // Stagger messages every 600ms
+      MESSAGES.forEach((_, i) => {
+        schedule(() => setVisibleCount(i + 1), 400 + i * 600);
+      });
+
+      // Pop in reactions
+      schedule(() => setShowHeart(true), 800);
+      schedule(() => setShowThumb(true), 1800);
+
+      // After all messages shown, wait 3s then fade out and restart
+      const totalDuration = 400 + MESSAGES.length * 600 + 3000;
+      schedule(() => {
+        setVisibleCount(0);
+        setShowHeart(false);
+        setShowThumb(false);
+        // Wait for fade-out transition, then restart
+        schedule(runCycle, 600);
+      }, totalDuration);
+    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated.current) {
           hasAnimated.current = true;
-          startAnimation();
+          runCycle();
         }
       },
       { threshold: 0.3 },
     );
 
     observer.observe(ref.current);
-    return () => observer.disconnect();
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      observer.disconnect();
+    };
   }, []);
-
-  const startAnimation = () => {
-    // Stagger messages every 600ms
-    MESSAGES.forEach((_, i) => {
-      setTimeout(() => setVisibleCount(i + 1), 400 + i * 600);
-    });
-
-    // Pop in reactions after first and second messages
-    setTimeout(() => setShowHeart(true), 800);
-    setTimeout(() => setShowThumb(true), 1800);
-  };
 
   return (
     <div ref={ref} className="relative mx-auto w-full max-w-sm">
