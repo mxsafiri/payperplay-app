@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { profiles, creatorProfiles } from "@/db/schema";
+import { profiles, creatorProfiles, creatorWallets } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -58,10 +58,13 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // If creator, create creator profile
+    // If creator, create creator profile + wallet
     if (role === "creator") {
       await db.insert(creatorProfiles).values({
         profileId: profile.id,
+      });
+      await db.insert(creatorWallets).values({
+        creatorId: profile.id,
       });
     }
 

@@ -6,6 +6,8 @@ export const userRoleEnum = pgEnum('user_role', ['creator', 'fan']);
 export const contentStatusEnum = pgEnum('content_status', ['draft', 'published', 'archived']);
 export const contentTypeEnum = pgEnum('content_type', ['youtube_preview', 'upload']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded']);
+export const walletTxTypeEnum = pgEnum('wallet_tx_type', ['earning', 'withdrawal', 'fee', 'refund', 'adjustment']);
+export const walletTxStatusEnum = pgEnum('wallet_tx_status', ['pending', 'completed', 'failed']);
 
 // Profiles table (extends neon_auth.user)
 export const profiles = pgTable('profiles', {
@@ -138,11 +140,49 @@ export const comments = pgTable('comments', {
   createdAtIdx: index('comments_created_at_idx').on(table.createdAt),
 }));
 
+// Creator wallets (custodial balance)
+export const creatorWallets = pgTable('creator_wallets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  creatorId: uuid('creator_id').notNull().unique().references(() => profiles.id, { onDelete: 'cascade' }),
+  balance: integer('balance').notNull().default(0), // Current balance in TZS
+  totalEarned: integer('total_earned').notNull().default(0),
+  totalWithdrawn: integer('total_withdrawn').notNull().default(0),
+  totalFees: integer('total_fees').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index('creator_wallets_creator_id_idx').on(table.creatorId),
+}));
+
+// Wallet transactions (immutable ledger)
+export const walletTransactions = pgTable('wallet_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  walletId: uuid('wallet_id').notNull().references(() => creatorWallets.id, { onDelete: 'cascade' }),
+  type: walletTxTypeEnum('type').notNull(),
+  status: walletTxStatusEnum('status').notNull().default('completed'),
+  amount: integer('amount').notNull(), // Positive = credit, negative = debit
+  balanceAfter: integer('balance_after').notNull(), // Snapshot of wallet balance after this tx
+  description: text('description'),
+  referenceType: text('reference_type'), // 'payment_intent', 'payout', 'manual'
+  referenceId: uuid('reference_id'), // ID of the related record
+  metadata: text('metadata'), // JSON string for extra data (phone number, provider ref, etc.)
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  walletIdIdx: index('wallet_tx_wallet_id_idx').on(table.walletId),
+  typeIdx: index('wallet_tx_type_idx').on(table.type),
+  statusIdx: index('wallet_tx_status_idx').on(table.status),
+  createdAtIdx: index('wallet_tx_created_at_idx').on(table.createdAt),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   creatorProfile: one(creatorProfiles, {
     fields: [profiles.id],
     references: [creatorProfiles.profileId],
+  }),
+  wallet: one(creatorWallets, {
+    fields: [profiles.id],
+    references: [creatorWallets.creatorId],
   }),
   content: many(content),
   paymentIntents: many(paymentIntents),
@@ -237,5 +277,20 @@ export const paymentIntentsRelations = relations(paymentIntents, ({ one }) => ({
   content: one(content, {
     fields: [paymentIntents.contentId],
     references: [content.id],
+  }),
+}));
+
+export const creatorWalletsRelations = relations(creatorWallets, ({ one, many }) => ({
+  creator: one(profiles, {
+    fields: [creatorWallets.creatorId],
+    references: [profiles.id],
+  }),
+  transactions: many(walletTransactions),
+}));
+
+export const walletTransactionsRelations = relations(walletTransactions, ({ one }) => ({
+  wallet: one(creatorWallets, {
+    fields: [walletTransactions.walletId],
+    references: [creatorWallets.id],
   }),
 }));

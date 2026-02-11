@@ -7,13 +7,32 @@ import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { Package, Rocket, Eye, Coins, Film, Plus, Pencil } from "lucide-react";
+import { Package, Rocket, Eye, Coins, Film, Plus, Pencil, Wallet, ArrowDownToLine, ArrowUpFromLine, Clock } from "lucide-react";
 
 interface CreatorStats {
   totalContent: number;
   publishedContent: number;
   totalEarnings: number;
   totalViews: number;
+}
+
+interface WalletData {
+  wallet: {
+    id: string;
+    balance: number;
+    totalEarned: number;
+    totalWithdrawn: number;
+    totalFees: number;
+  };
+  transactions: {
+    id: string;
+    type: string;
+    status: string;
+    amount: number;
+    balanceAfter: number;
+    description: string | null;
+    createdAt: string;
+  }[];
 }
 
 interface MediaItem {
@@ -38,6 +57,7 @@ export default function CreatorDashboard() {
   const { data: session, isPending } = useSession();
   const [stats, setStats] = useState<CreatorStats | null>(null);
   const [recentContent, setRecentContent] = useState<ContentItem[]>([]);
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,9 +73,10 @@ export default function CreatorDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, contentRes] = await Promise.all([
+      const [statsRes, contentRes, walletRes] = await Promise.all([
         fetch("/api/creator/stats"),
         fetch("/api/creator/content?limit=5"),
+        fetch("/api/creator/wallet"),
       ]);
 
       if (statsRes.ok) {
@@ -66,6 +87,11 @@ export default function CreatorDashboard() {
       if (contentRes.ok) {
         const contentData = await contentRes.json();
         setRecentContent(contentData.content || []);
+      }
+
+      if (walletRes.ok) {
+        const walletJson = await walletRes.json();
+        setWalletData(walletJson);
       }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -156,6 +182,82 @@ export default function CreatorDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Wallet Section */}
+        {walletData && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+            {/* Balance Card */}
+            <div className="lg:col-span-1 relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-md p-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <Wallet className="w-5 h-5 text-amber-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Wallet Balance</span>
+                </div>
+                <div className="text-4xl font-bold tracking-tight mb-1">
+                  {walletData.wallet.balance.toLocaleString()}
+                  <span className="text-base font-normal text-muted-foreground ml-2">TZS</span>
+                </div>
+                <div className="flex items-center gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-1.5 text-green-400">
+                    <ArrowDownToLine className="w-3.5 h-3.5" />
+                    <span>{walletData.wallet.totalEarned.toLocaleString()} earned</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-red-400">
+                    <ArrowUpFromLine className="w-3.5 h-3.5" />
+                    <span>{walletData.wallet.totalWithdrawn.toLocaleString()} withdrawn</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Transactions */}
+            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50 p-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+              <div className="relative">
+                <h3 className="text-lg font-semibold tracking-tight mb-4">Recent Transactions</h3>
+                {walletData.transactions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No transactions yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Earnings will appear here when fans purchase your content</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {walletData.transactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            tx.type === "earning" ? "bg-green-500/15 text-green-400" :
+                            tx.type === "withdrawal" ? "bg-red-500/15 text-red-400" :
+                            "bg-neutral-500/15 text-neutral-400"
+                          }`}>
+                            {tx.type === "earning" ? <ArrowDownToLine className="w-4 h-4" /> :
+                             tx.type === "withdrawal" ? <ArrowUpFromLine className="w-4 h-4" /> :
+                             <Coins className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium capitalize">{tx.type}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {tx.description || new Date(tx.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`text-sm font-semibold ${
+                          tx.amount > 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} TZS
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent Content — glassmorphism card */}
         <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
