@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { paymentIntents, entitlements } from "@/db/schema";
+import { paymentIntents, entitlements, content } from "@/db/schema";
 import { paymentProvider } from "@/lib/payments";
+import { creditCreatorWallet } from "@/lib/wallet";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
@@ -52,6 +53,24 @@ export async function POST(req: NextRequest) {
           contentId: paymentIntent.contentId,
           paymentIntentId: paymentIntent.id,
         });
+
+        // Credit creator's wallet (85% of payment, 15% platform fee)
+        const contentItem = await db.query.content.findFirst({
+          where: eq(content.id, paymentIntent.contentId),
+        });
+
+        if (contentItem) {
+          const result = await creditCreatorWallet({
+            creatorId: contentItem.creatorId,
+            amountTzs: paymentIntent.amountTzs,
+            paymentIntentId: paymentIntent.id,
+            contentTitle: contentItem.title,
+          });
+
+          if (!result.success) {
+            console.error("Failed to credit creator wallet:", result.error);
+          }
+        }
 
         console.log("Entitlement granted:", {
           userId: paymentIntent.userId,
