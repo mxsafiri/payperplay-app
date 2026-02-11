@@ -182,6 +182,7 @@ export default function CreateContentPage() {
                     ))}
                   </select>
                 </div>
+                </div>
               </div>
             </div>
 
@@ -247,6 +248,7 @@ export default function CreateContentPage() {
                     </p>
                   </div>
                 )}
+                </div>
               </div>
             </div>
 
@@ -333,6 +335,7 @@ export default function CreateContentPage() {
                       </p>
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             </div>
