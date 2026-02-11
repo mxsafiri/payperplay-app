@@ -1,3 +1,0 @@
-module.exports=[78280,a=>{"use strict";a.i(7997),a.i(99475),a.i(10384);var b=a.i(52425);let c={contentType:"image/png",size:{width:1200,height:600}};async function d(a){let{__metadata_id__:d,...e}=await a.params,f=(0,b.fillMetadataSegment)("/",e,"twitter-image");return[function(a,b){let c={alt:a.alt,type:a.contentType||"image/png",url:f+"?46079f88e99dd9bf"},{size:d}=a;return d&&(c.width=d.width,c.height=d.height),c}(c,0)]}a.s(["default",0,d],78280)}];
-
-//# sourceMappingURL=src_app_twitter-image--metadata_ac734ba2.js.map
