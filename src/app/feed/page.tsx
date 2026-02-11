@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
-import { placeholderCreators } from "@/data/placeholder-creators";
+import { Film } from "lucide-react";
+
+interface MediaItem {
+  id: string;
+  mediaType: string;
+  url: string | null;
+}
 
 interface ContentItem {
   id: string;
@@ -21,6 +27,7 @@ interface ContentItem {
     displayName: string | null;
     avatarUrl: string | null;
   };
+  media?: MediaItem[];
 }
 
 const CATEGORIES = ["All", "Music", "Comedy", "Education", "Entertainment", "Sports", "News", "Gaming", "Lifestyle"];
@@ -53,12 +60,6 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Get placeholder image for creator
-  const getCreatorImage = (creatorId: string) => {
-    const index = parseInt(creatorId.slice(-1), 16) % placeholderCreators.length;
-    return placeholderCreators[index]?.image || placeholderCreators[0].image;
   };
 
   return (
@@ -140,7 +141,9 @@ export default function FeedPage() {
           </div>
         ) : content.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-6xl mb-4">🎬</div>
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+              <Film className="w-10 h-10 text-muted-foreground" />
+            </div>
             <h3 className="text-xl font-semibold mb-2">No content yet</h3>
             <p className="text-muted-foreground mb-6">
               {selectedCategory === "All"
@@ -157,24 +160,35 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {content.map((item) => (
+            {content.map((item) => {
+              const thumbnail = item.media?.find((m) => m.mediaType === "thumbnail")?.url;
+              const creatorName = item.creator.displayName || item.creator.handle;
+              const creatorInitial = creatorName.slice(0, 1).toUpperCase();
+
+              return (
               <Link key={item.id} href={`/content/${item.id}`}>
                 <div className="group cursor-pointer">
                   {/* Thumbnail */}
-                  <div className="relative aspect-portrait overflow-hidden rounded-lg bg-muted mb-3">
-                    <Image
-                      src={getCreatorImage(item.creator.id)}
-                      alt={item.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    />
+                  <div className="relative aspect-video overflow-hidden rounded-lg bg-muted mb-3">
+                    {thumbnail ? (
+                      <Image
+                        src={thumbnail}
+                        alt={item.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-500/20">
+                        <Film className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     
                     {/* Play Button Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                        <svg className="w-7 h-7 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
@@ -187,18 +201,24 @@ export default function FeedPage() {
 
                     {/* Creator Info */}
                     <div className="absolute bottom-3 left-3 right-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white">
-                          <Image
-                            src={item.creator.avatarUrl || getCreatorImage(item.creator.id)}
-                            alt={item.creator.displayName || item.creator.handle}
-                            fill
-                            className="object-cover"
-                            sizes="32px"
-                          />
-                        </div>
+                      <div className="flex items-center gap-2">
+                        {item.creator.avatarUrl ? (
+                          <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
+                            <Image
+                              src={item.creator.avatarUrl}
+                              alt={creatorName}
+                              fill
+                              className="object-cover"
+                              sizes="32px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-full border-2 border-white flex-shrink-0 bg-amber-500 flex items-center justify-center text-white text-xs font-bold">
+                            {creatorInitial}
+                          </div>
+                        )}
                         <span className="text-white text-sm font-medium truncate">
-                          {item.creator.displayName || `@${item.creator.handle}`}
+                          {creatorName}
                         </span>
                       </div>
                     </div>
@@ -219,7 +239,8 @@ export default function FeedPage() {
                   </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

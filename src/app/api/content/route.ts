@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
             avatarUrl: true,
           },
         },
+        media: true,
       },
     });
 
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
               avatarUrl: true,
             },
           },
+          media: true,
         },
       });
     } else {
