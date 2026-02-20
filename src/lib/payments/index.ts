@@ -1,23 +1,16 @@
 import { PaymentProvider, PaymentConfig } from './types';
 import { MockPaymentProvider } from './providers/mock-provider';
+import { SnippePaymentProvider } from './providers/snippe-provider';
 
 /**
  * Payment provider factory
- * Add real PSP implementations here when ready
  */
 export function createPaymentProvider(config: PaymentConfig): PaymentProvider {
   switch (config.provider.toLowerCase()) {
+    case 'snippe':
+      return new SnippePaymentProvider(config);
     case 'mock':
       return new MockPaymentProvider(config);
-    
-    // Add real providers here:
-    // case 'selcom':
-    //   return new SelcomPaymentProvider(config);
-    // case 'dpo':
-    //   return new DPOPaymentProvider(config);
-    // case 'flutterwave':
-    //   return new FlutterwavePaymentProvider(config);
-    
     default:
       throw new Error(`Unsupported payment provider: ${config.provider}`);
   }

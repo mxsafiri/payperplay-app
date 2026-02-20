@@ -2,12 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { paymentIntents, entitlements, content } from "@/db/schema";
 import { paymentProvider } from "@/lib/payments";
+import { SnippePaymentProvider } from "@/lib/payments/providers/snippe-provider";
 import { creditCreatorWallet } from "@/lib/wallet";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json();
+    const rawBody = await req.text();
+
+    // Verify Snippe webhook signature if using Snippe provider
+    if (paymentProvider.name === "snippe") {
+      const signature = req.headers.get("x-webhook-signature") || "";
+      const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET || "";
+
+      if (webhookSecret && !SnippePaymentProvider.verifySignature(rawBody, signature, webhookSecret)) {
+        console.error("Invalid webhook signature");
+        return NextResponse.json(
+          { error: "Invalid signature" },
+          { status: 401 }
+        );
+      }
+    }
+
+    const payload = JSON.parse(rawBody);
 
     // Verify and parse callback from payment provider
     const callbackResult = paymentProvider.verifyCallback(payload);

@@ -7,7 +7,8 @@ import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { Package, Rocket, Eye, Coins, Film, Plus, Pencil, Wallet, ArrowDownToLine, ArrowUpFromLine, Clock } from "lucide-react";
+import { Package, Rocket, Eye, Coins, Film, Plus, Pencil, Wallet, ArrowDownToLine, ArrowUpFromLine, Clock, X, Phone, Banknote } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface CreatorStats {
   totalContent: number;
@@ -59,6 +60,12 @@ export default function CreatorDashboard() {
   const [recentContent, setRecentContent] = useState<ContentItem[]>([]);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawPhone, setWithdrawPhone] = useState("");
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [withdrawError, setWithdrawError] = useState("");
+  const [withdrawSuccess, setWithdrawSuccess] = useState("");
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -97,6 +104,44 @@ export default function CreatorDashboard() {
       console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWithdrawError("");
+    setWithdrawSuccess("");
+    setWithdrawLoading(true);
+
+    try {
+      const res = await fetch("/api/creator/wallet/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseInt(withdrawAmount),
+          phoneNumber: withdrawPhone,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setWithdrawError(data.error || "Withdrawal failed");
+        setWithdrawLoading(false);
+        return;
+      }
+
+      setWithdrawSuccess(
+        `Withdrawal of ${parseInt(withdrawAmount).toLocaleString()} TZS sent to ${withdrawPhone}. Check your phone!`
+      );
+      setWithdrawAmount("");
+      setWithdrawPhone("");
+      // Refresh wallet data
+      fetchDashboardData();
+    } catch {
+      setWithdrawError("An unexpected error occurred");
+    } finally {
+      setWithdrawLoading(false);
     }
   };
 
@@ -209,6 +254,14 @@ export default function CreatorDashboard() {
                     <span>{walletData.wallet.totalWithdrawn.toLocaleString()} withdrawn</span>
                   </div>
                 </div>
+                <Button
+                  onClick={() => { setShowWithdrawModal(true); setWithdrawError(""); setWithdrawSuccess(""); }}
+                  disabled={walletData.wallet.balance < 1000}
+                  className="mt-5 w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Banknote className="w-4 h-4 mr-1.5" />
+                  Withdraw
+                </Button>
               </div>
             </div>
 
@@ -346,6 +399,113 @@ export default function CreatorDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)} />
+          <div className="relative w-full max-w-md mx-4 rounded-2xl border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+            {/* Gloss */}
+            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold tracking-tight">Withdraw Earnings</h3>
+                <button
+                  onClick={() => setShowWithdrawModal(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {withdrawSuccess ? (
+                <div className="text-center py-4">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-green-500/15 flex items-center justify-center">
+                    <ArrowUpFromLine className="w-6 h-6 text-green-400" />
+                  </div>
+                  <p className="text-sm text-green-400 font-medium">{withdrawSuccess}</p>
+                  <Button
+                    onClick={() => setShowWithdrawModal(false)}
+                    className="mt-6 bg-white/10 hover:bg-white/15 text-foreground"
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleWithdraw} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+                      Amount (TZS)
+                    </label>
+                    <div className="relative">
+                      <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        placeholder="1,000"
+                        min={1000}
+                        max={walletData?.wallet.balance || 0}
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        required
+                        className="pl-10 bg-white/5 border-white/10 focus:border-amber-500/50"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 1,000 TZS
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+                      Mobile Money Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="tel"
+                        placeholder="0712345678"
+                        value={withdrawPhone}
+                        onChange={(e) => setWithdrawPhone(e.target.value)}
+                        required
+                        className="pl-10 bg-white/5 border-white/10 focus:border-amber-500/50"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      M-Pesa, Airtel Money, Mixx by Yas, or HaloPesa
+                    </p>
+                  </div>
+
+                  {withdrawError && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                      {withdrawError}
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={withdrawLoading || !withdrawAmount || !withdrawPhone}
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 disabled:opacity-50"
+                  >
+                    {withdrawLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Processing...
+                      </div>
+                    ) : (
+                      <>
+                        <Banknote className="w-4 h-4 mr-1.5" />
+                        Withdraw {withdrawAmount ? `${parseInt(withdrawAmount).toLocaleString()} TZS` : ""}
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
