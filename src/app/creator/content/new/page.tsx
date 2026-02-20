@@ -18,7 +18,7 @@ const CATEGORIES = [
   "Other",
 ];
 
-const PRESET_PRICES = [300, 500, 1000];
+const PRESET_PRICES = [500, 1000, 2000];
 
 export default function CreateContentPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function CreateContentPage() {
   const [contentType, setContentType] = useState<"youtube_preview" | "upload">("youtube_preview");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [priceType, setPriceType] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState(300);
+  const [selectedPreset, setSelectedPreset] = useState(500);
   const [customPrice, setCustomPrice] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,8 +56,8 @@ export default function CreateContentPage() {
 
       const priceTzs = priceType === "preset" ? selectedPreset : parseInt(customPrice);
 
-      if (!priceTzs || priceTzs < 100) {
-        setError("Price must be at least 100 TZS");
+      if (!priceTzs || priceTzs < 500) {
+        setError("Price must be at least 500 TZS");
         setLoading(false);
         return;
       }
@@ -323,15 +323,15 @@ export default function CreateContentPage() {
                           value={customPrice}
                           onChange={(e) => setCustomPrice(e.target.value)}
                           disabled={loading}
-                          min="100"
-                          step="50"
+                          min="500"
+                          step="100"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                           TZS
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Minimum: 100 TZS
+                        Minimum: 500 TZS
                       </p>
                     </div>
                   )}

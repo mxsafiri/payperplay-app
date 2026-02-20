@@ -85,9 +85,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (priceTzs < 100) {
+    if (priceTzs < 500) {
       return NextResponse.json(
-        { error: "Price must be at least 100 TZS" },
+        { error: "Price must be at least 500 TZS" },
         { status: 400 }
       );
     }
