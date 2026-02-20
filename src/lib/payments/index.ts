@@ -20,7 +20,6 @@ export function createPaymentProvider(config: PaymentConfig): PaymentProvider {
 export const paymentProvider = createPaymentProvider({
   provider: process.env.PAYMENT_PROVIDER || 'mock',
   apiKey: process.env.PAYMENT_API_KEY || '',
-  apiSecret: process.env.PAYMENT_API_SECRET,
   webhookSecret: process.env.PAYMENT_WEBHOOK_SECRET,
   environment: (process.env.PAYMENT_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
   callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback`,
