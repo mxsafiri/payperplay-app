@@ -34,8 +34,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // Idempotency: only process if the transaction is still pending
+    const tx = await db.query.walletTransactions.findFirst({
+      where: eq(walletTransactions.id, walletTxId),
+    });
+
+    if (!tx || tx.status !== "pending") {
+      console.log("Payout webhook skipped (already processed or not found):", walletTxId);
+      return NextResponse.json({ success: true });
+    }
+
     if (eventType === "payout.completed") {
-      // Mark the wallet transaction as completed
       await db
         .update(walletTransactions)
         .set({ status: "completed" })
@@ -43,7 +52,6 @@ export async function POST(req: NextRequest) {
 
       console.log("Payout completed, wallet tx updated:", walletTxId);
     } else if (eventType === "payout.failed") {
-      // Mark the wallet transaction as failed
       await db
         .update(walletTransactions)
         .set({
@@ -53,40 +61,34 @@ export async function POST(req: NextRequest) {
         .where(eq(walletTransactions.id, walletTxId));
 
       // Refund the creator's wallet balance
-      const tx = await db.query.walletTransactions.findFirst({
-        where: eq(walletTransactions.id, walletTxId),
+      const refundAmount = Math.abs(tx.amount);
+
+      await db
+        .update(creatorWallets)
+        .set({
+          balance: sql`${creatorWallets.balance} + ${refundAmount}`,
+          totalWithdrawn: sql`${creatorWallets.totalWithdrawn} - ${refundAmount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(creatorWallets.id, tx.walletId));
+
+      // Get updated wallet balance for ledger entry
+      const wallet = await db.query.creatorWallets.findFirst({
+        where: eq(creatorWallets.id, tx.walletId),
       });
 
-      if (tx) {
-        const refundAmount = Math.abs(tx.amount);
+      await db.insert(walletTransactions).values({
+        walletId: tx.walletId,
+        type: "refund",
+        status: "completed",
+        amount: refundAmount,
+        balanceAfter: wallet?.balance || 0,
+        description: `Refund: withdrawal failed — ${data.failure_reason || "Unknown error"}`,
+        referenceType: "payout",
+        referenceId: walletTxId,
+      });
 
-        await db
-          .update(creatorWallets)
-          .set({
-            balance: sql`${creatorWallets.balance} + ${refundAmount}`,
-            totalWithdrawn: sql`${creatorWallets.totalWithdrawn} - ${refundAmount}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(creatorWallets.id, tx.walletId));
-
-        // Insert refund transaction
-        const wallet = await db.query.creatorWallets.findFirst({
-          where: eq(creatorWallets.id, tx.walletId),
-        });
-
-        await db.insert(walletTransactions).values({
-          walletId: tx.walletId,
-          type: "refund",
-          status: "completed",
-          amount: refundAmount,
-          balanceAfter: (wallet?.balance || 0) + refundAmount,
-          description: `Refund: withdrawal failed — ${data.failure_reason || "Unknown error"}`,
-          referenceType: "payout",
-          referenceId: walletTxId,
-        });
-
-        console.log("Payout failed, balance refunded:", { walletTxId, refundAmount });
-      }
+      console.log("Payout failed, balance refunded:", { walletTxId, refundAmount });
     }
 
     return NextResponse.json({ success: true });
