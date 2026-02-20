@@ -31,6 +31,14 @@ export class SnippePaymentProvider extends BasePaymentProvider {
       };
     }
 
+    if (params.amount < 500) {
+      return {
+        success: false,
+        providerReference: '',
+        error: 'Minimum payment amount is 500 TZS',
+      };
+    }
+
     const normalizedPhone = this.normalizePhoneNumber(params.phoneNumber);
     // Snippe expects 255XXXXXXXXX (no + prefix)
     const snippePhone = normalizedPhone.replace('+', '');
@@ -54,7 +62,7 @@ export class SnippePaymentProvider extends BasePaymentProvider {
             lastname: 'Customer',
             email: 'customer@payperplay.app',
           },
-          webhook_url: this.config.callbackUrl,
+          ...(this.config.callbackUrl?.startsWith('https://') ? { webhook_url: this.config.callbackUrl } : {}),
           metadata: {
             payment_intent_id: params.reference,
             ...(params.metadata || {}),
@@ -152,6 +160,13 @@ export class SnippePaymentProvider extends BasePaymentProvider {
       });
 
       const result = await response.json();
+
+      console.log('Snippe checkStatus response:', {
+        httpStatus: response.status,
+        apiStatus: result.status,
+        paymentStatus: result.data?.status,
+        reference: providerReference,
+      });
 
       if (result.status !== 'success' || !result.data) {
         return { status: 'pending' };

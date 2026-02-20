@@ -107,7 +107,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   };
 
   const pollPaymentStatus = async (paymentIntentId: string) => {
-    const maxAttempts = 30; // 30 seconds
+    const maxAttempts = 60; // 60 attempts
     let attempts = 0;
 
     const interval = setInterval(async () => {
@@ -134,7 +134,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       } catch (error) {
         console.error("Status check error:", error);
       }
-    }, 1000);
+    }, 5000);
   };
 
   const getCreatorImage = (creatorId: string) => {
