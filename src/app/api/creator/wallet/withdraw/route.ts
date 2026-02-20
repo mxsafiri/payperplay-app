@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { creatorWallets } from "@/db/schema";
+import { creatorWallets, walletTransactions } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { debitCreatorWallet } from "@/lib/wallet";
 import { sendPayout, calculatePayoutFee } from "@/lib/payouts/snippe-payout";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const MIN_WITHDRAWAL_TZS = 1000;
 
@@ -87,11 +87,34 @@ export async function POST(req: NextRequest) {
     });
 
     if (!payoutResult.success) {
-      // TODO: In production, implement a reversal/refund mechanism
-      // For now, log the error — the payout webhook will handle failures
+      // Refund: restore wallet balance and mark transaction as failed
       console.error("Payout initiation failed after debit:", payoutResult.error);
+      try {
+        await db
+          .update(creatorWallets)
+          .set({
+            balance: sql`${creatorWallets.balance} + ${amount}`,
+            totalWithdrawn: sql`${creatorWallets.totalWithdrawn} - ${amount}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(creatorWallets.creatorId, profile.id));
+
+        if (debitResult.transactionId) {
+          await db
+            .update(walletTransactions)
+            .set({
+              status: "failed",
+              description: `Withdrawal failed: ${payoutResult.error}`,
+            })
+            .where(eq(walletTransactions.id, debitResult.transactionId));
+        }
+        console.log("Wallet refunded after failed payout initiation");
+      } catch (refundError) {
+        console.error("CRITICAL: Failed to refund wallet after payout failure:", refundError);
+      }
+
       return NextResponse.json(
-        { error: payoutResult.error || "Payout failed — your balance will be restored" },
+        { error: payoutResult.error || "Payout failed — please try again" },
         { status: 500 }
       );
     }

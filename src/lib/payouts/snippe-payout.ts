@@ -77,6 +77,8 @@ export async function sendPayout(params: PayoutParams): Promise<PayoutResponse> 
   const phone = normalizePhone(params.recipientPhone);
 
   try {
+    const webhookUrl = params.webhookUrl || `${process.env.NEXT_PUBLIC_APP_URL}/api/payouts/callback`;
+
     const response = await fetch(`${SNIPPE_BASE_URL}/v1/payouts/send`, {
       method: 'POST',
       headers: {
@@ -89,7 +91,7 @@ export async function sendPayout(params: PayoutParams): Promise<PayoutResponse> 
         recipient_phone: phone,
         recipient_name: params.recipientName,
         narration: params.narration || 'PayPerPlay creator withdrawal',
-        webhook_url: params.webhookUrl || `${process.env.NEXT_PUBLIC_APP_URL}/api/payouts/callback`,
+        ...(webhookUrl?.startsWith('https://') ? { webhook_url: webhookUrl } : {}),
         metadata: params.metadata || {},
       }),
     });
