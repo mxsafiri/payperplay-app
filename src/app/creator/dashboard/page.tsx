@@ -443,8 +443,8 @@ export default function CreatorDashboard() {
                       <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         type="number"
-                        placeholder="1,000"
-                        min={1000}
+                        placeholder="5,000"
+                        min={5000}
                         max={walletData?.wallet.balance || 0}
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -453,7 +453,7 @@ export default function CreatorDashboard() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 1,000 TZS
+                      Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 5,000 TZS
                     </p>
                   </div>
 

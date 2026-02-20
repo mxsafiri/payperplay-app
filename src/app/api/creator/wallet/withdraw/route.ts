@@ -7,7 +7,7 @@ import { debitCreatorWallet } from "@/lib/wallet";
 import { sendPayout, calculatePayoutFee } from "@/lib/payouts/snippe-payout";
 import { eq, sql } from "drizzle-orm";
 
-const MIN_WITHDRAWAL_TZS = 1000;
+const MIN_WITHDRAWAL_TZS = 5000;
 
 export async function POST(req: NextRequest) {
   try {
