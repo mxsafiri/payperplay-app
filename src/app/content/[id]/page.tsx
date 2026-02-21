@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
@@ -43,6 +43,11 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewEnded, setPreviewEnded] = useState(false);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+
+  const PREVIEW_SECONDS = 15;
 
   useEffect(() => {
     params.then((p) => {
@@ -57,9 +62,14 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       if (response.ok) {
         const data = await response.json();
         setContent(data);
-        // If user has access and it's an upload, fetch stream URL
-        if (data.hasAccess && data.contentType === "upload") {
-          fetchStreamUrl(id);
+        if (data.contentType === "upload") {
+          if (data.hasAccess) {
+            // Full access — fetch full stream URL
+            fetchStreamUrl(id);
+          } else if (data.priceTzs > 0) {
+            // Paid content without access — fetch preview
+            fetchPreviewUrl(id);
+          }
         }
       } else {
         router.push("/feed");
@@ -83,6 +93,26 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       console.error("Failed to fetch stream URL:", error);
     }
   };
+
+  const fetchPreviewUrl = async (id: string) => {
+    try {
+      const res = await fetch(`/api/content/${id}/stream?preview=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setPreviewUrl(data.streamUrl);
+      }
+    } catch (error) {
+      console.error("Failed to fetch preview URL:", error);
+    }
+  };
+
+  const handlePreviewTimeUpdate = useCallback(() => {
+    const video = previewVideoRef.current;
+    if (video && video.currentTime >= PREVIEW_SECONDS) {
+      video.pause();
+      setPreviewEnded(true);
+    }
+  }, []);
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +256,47 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                   <p className="text-sm">Loading video...</p>
                 </div>
               </div>
+            ) : !content.hasAccess && isUpload && previewUrl ? (
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+                <video
+                  ref={previewVideoRef}
+                  src={previewUrl}
+                  controls={!previewEnded}
+                  className="w-full h-full"
+                  poster={thumbnailMedia?.url || undefined}
+                  controlsList="nodownload nofullscreen"
+                  onTimeUpdate={handlePreviewTimeUpdate}
+                  autoPlay
+                  muted
+                />
+                {/* Preview badge */}
+                {!previewEnded && (
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-500/90 text-white text-xs font-semibold backdrop-blur-sm">
+                    Preview \u00b7 {PREVIEW_SECONDS}s
+                  </div>
+                )}
+                {/* Overlay when preview ends */}
+                {previewEnded && (
+                  <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+                    <div className="text-center text-white max-w-sm px-4">
+                      <div className="text-5xl mb-3">🔒</div>
+                      <h3 className="text-xl font-bold mb-2">Preview ended</h3>
+                      <p className="text-white/70 text-sm mb-4">
+                        Pay {content.priceTzs.toLocaleString()} TZS to watch the full video
+                      </p>
+                      <Button
+                        onClick={() => {
+                          const sidebar = document.getElementById("payment-sidebar");
+                          sidebar?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                      >
+                        Unlock Full Video
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                 <Image
@@ -295,8 +366,20 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Sidebar - Payment */}
-          <div className="lg:col-span-1">
-            {!content.hasAccess ? (
+          <div id="payment-sidebar" className="lg:col-span-1">
+            {content.priceTzs === 0 ? (
+              <Card className="sticky top-4">
+                <CardContent className="p-6 text-center">
+                  <div className="inline-block px-4 py-1 rounded-full bg-green-500/15 text-green-500 text-sm font-semibold mb-3">
+                    FREE
+                  </div>
+                  <h3 className="font-semibold mb-2">Free Content</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Watch this content for free
+                  </p>
+                </CardContent>
+              </Card>
+            ) : !content.hasAccess ? (
               <Card className="sticky top-4">
                 <CardHeader>
                   <h2 className="text-xl font-bold">Unlock Content</h2>

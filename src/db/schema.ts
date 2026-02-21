@@ -140,6 +140,34 @@ export const comments = pgTable('comments', {
   createdAtIdx: index('comments_created_at_idx').on(table.createdAt),
 }));
 
+// Playlists / Series
+export const playlists = pgTable('playlists', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  creatorId: uuid('creator_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category'),
+  coverImageUrl: text('cover_image_url'),
+  isPublished: boolean('is_published').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index('playlists_creator_id_idx').on(table.creatorId),
+  publishedIdx: index('playlists_published_idx').on(table.isPublished),
+}));
+
+export const playlistItems = pgTable('playlist_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  playlistId: uuid('playlist_id').notNull().references(() => playlists.id, { onDelete: 'cascade' }),
+  contentId: uuid('content_id').notNull().references(() => content.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull(), // Order within the playlist
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  playlistIdIdx: index('playlist_items_playlist_id_idx').on(table.playlistId),
+  contentIdIdx: index('playlist_items_content_id_idx').on(table.contentId),
+  positionIdx: index('playlist_items_position_idx').on(table.playlistId, table.position),
+}));
+
 // Creator wallets (custodial balance)
 export const creatorWallets = pgTable('creator_wallets', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -203,6 +231,7 @@ export const contentRelations = relations(content, ({ one, many }) => ({
   entitlements: many(entitlements),
   likes: many(likes),
   comments: many(comments),
+  playlistItems: many(playlistItems),
 }));
 
 export const entitlementsRelations = relations(entitlements, ({ one }) => ({
@@ -292,5 +321,24 @@ export const walletTransactionsRelations = relations(walletTransactions, ({ one 
   wallet: one(creatorWallets, {
     fields: [walletTransactions.walletId],
     references: [creatorWallets.id],
+  }),
+}));
+
+export const playlistsRelations = relations(playlists, ({ one, many }) => ({
+  creator: one(profiles, {
+    fields: [playlists.creatorId],
+    references: [profiles.id],
+  }),
+  items: many(playlistItems),
+}));
+
+export const playlistItemsRelations = relations(playlistItems, ({ one }) => ({
+  playlist: one(playlists, {
+    fields: [playlistItems.playlistId],
+    references: [playlists.id],
+  }),
+  content: one(content, {
+    fields: [playlistItems.contentId],
+    references: [content.id],
   }),
 }));

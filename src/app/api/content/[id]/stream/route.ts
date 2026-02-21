@@ -40,11 +40,15 @@ export async function GET(
       return NextResponse.json({ error: "Content not found" }, { status: 404 });
     }
 
-    // Check if user is the creator (creators can always view their own content)
+    // Free content is accessible to everyone
+    const isFree = contentItem.priceTzs === 0;
     const isCreator = contentItem.creatorId === profile.id;
+    const isPreview = req.nextUrl.searchParams.get("preview") === "true";
 
-    if (!isCreator) {
-      // Check entitlement
+    let hasFullAccess = isFree || isCreator;
+
+    if (!hasFullAccess && !isPreview) {
+      // Check entitlement for paid content (full access)
       const entitlement = await db.query.entitlements.findFirst({
         where: (entitlements, { and, eq }) =>
           and(
@@ -53,7 +57,9 @@ export async function GET(
           ),
       });
 
-      if (!entitlement) {
+      if (entitlement) {
+        hasFullAccess = true;
+      } else {
         return NextResponse.json(
           { error: "Payment required to access this content" },
           { status: 403 }
@@ -94,6 +100,7 @@ export async function GET(
     return NextResponse.json({
       streamUrl,
       thumbnailUrl,
+      preview: isPreview && !hasFullAccess,
       expiresIn: 3600,
     });
   } catch (error) {

@@ -47,7 +47,7 @@ function mapToCardItem(item: DbContentItem, index: number): DashboardContentItem
     categoryId: item.category.toLowerCase(),
     creatorName: item.creator?.displayName || item.creator?.handle || "Creator",
     title: item.title,
-    priceLabel: `${item.priceTzs.toLocaleString()} TZS / play`,
+    priceLabel: item.priceTzs === 0 ? "Free" : `${item.priceTzs.toLocaleString()} TZS / play`,
     accent: index % 2 === 0 ? "primary" : "secondary",
     imagePath: getThumbnail(item),
   };

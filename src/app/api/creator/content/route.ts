@@ -78,16 +78,23 @@ export async function POST(req: NextRequest) {
     const { title, description, category, contentType, youtubeUrl, priceTzs, videoStorageKey, thumbnailStorageKey } = await req.json();
 
     // Validate
-    if (!title || !category || !contentType || !priceTzs) {
+    if (!title || !category || !contentType || priceTzs === undefined || priceTzs === null) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    if (priceTzs < 500) {
+    if (priceTzs < 0) {
       return NextResponse.json(
-        { error: "Price must be at least 500 TZS" },
+        { error: "Price cannot be negative" },
+        { status: 400 }
+      );
+    }
+
+    if (priceTzs > 0 && priceTzs < 500) {
+      return NextResponse.json(
+        { error: "Paid content must be at least 500 TZS" },
         { status: 400 }
       );
     }

@@ -36,7 +36,7 @@ export default function CreateContentPage() {
   const [category, setCategory] = useState("Music");
   const [contentType, setContentType] = useState<"youtube_preview" | "upload">("youtube_preview");
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [priceType, setPriceType] = useState<"preset" | "custom">("preset");
+  const [priceType, setPriceType] = useState<"free" | "preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState(500);
   const [customPrice, setCustomPrice] = useState("");
 
@@ -143,10 +143,16 @@ export default function CreateContentPage() {
         return;
       }
 
-      const priceTzs = priceType === "preset" ? selectedPreset : parseInt(customPrice);
+      const priceTzs = priceType === "free" ? 0 : priceType === "preset" ? selectedPreset : parseInt(customPrice);
 
-      if (!priceTzs || priceTzs < 500) {
-        setError("Price must be at least 500 TZS");
+      if (priceTzs > 0 && priceTzs < 500) {
+        setError("Paid content must be at least 500 TZS");
+        setLoading(false);
+        return;
+      }
+
+      if (priceType === "custom" && (isNaN(priceTzs) || priceTzs < 0)) {
+        setError("Please enter a valid price");
         setLoading(false);
         return;
       }
@@ -477,6 +483,31 @@ export default function CreateContentPage() {
                   <div className="flex items-center gap-2">
                     <input
                       type="radio"
+                      id="free"
+                      checked={priceType === "free"}
+                      onChange={() => setPriceType("free")}
+                      disabled={loading}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="free" className="text-sm font-medium">
+                      Free
+                    </label>
+                    <span className="text-xs text-green-500 font-medium">Recommended for growing your audience</span>
+                  </div>
+
+                  {priceType === "free" && (
+                    <div className="ml-6 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <p className="text-sm text-green-600 dark:text-green-400">
+                        Anyone can watch this content for free. Great for building your fanbase!
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
                       id="preset"
                       checked={priceType === "preset"}
                       onChange={() => setPriceType("preset")}
@@ -542,7 +573,7 @@ export default function CreateContentPage() {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Minimum: 500 TZS
+                        Minimum for paid content: 500 TZS
                       </p>
                     </div>
                   )}

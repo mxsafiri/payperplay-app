@@ -184,6 +184,11 @@ export default function CreatorDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <ThemeSwitch />
+              <Link href="/creator/playlists">
+                <Button variant="outline">
+                  Playlists
+                </Button>
+              </Link>
               <Link href="/creator/content/new">
                 <Button className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]">
                   <Plus className="w-4 h-4 mr-1.5" />

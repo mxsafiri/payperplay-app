@@ -43,29 +43,35 @@ export async function GET(
 
     // Check if user has access
     let hasAccess = false;
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
 
-    if (session) {
-      const profile = await db.query.profiles.findFirst({
-        where: (profiles, { eq }) => eq(profiles.userId, session.user.id),
+    // Free content is accessible to everyone
+    if (contentItem.priceTzs === 0) {
+      hasAccess = true;
+    } else {
+      const session = await auth.api.getSession({
+        headers: await headers(),
       });
 
-      if (profile) {
-        // Check if user is the creator
-        if (profile.id === contentItem.creatorId) {
-          hasAccess = true;
-        } else {
-          // Check for entitlement
-          const entitlement = await db.query.entitlements.findFirst({
-            where: (entitlements, { and, eq }) =>
-              and(
-                eq(entitlements.userId, profile.id),
-                eq(entitlements.contentId, id)
-              ),
-          });
-          hasAccess = !!entitlement;
+      if (session) {
+        const profile = await db.query.profiles.findFirst({
+          where: (profiles, { eq }) => eq(profiles.userId, session.user.id),
+        });
+
+        if (profile) {
+          // Check if user is the creator
+          if (profile.id === contentItem.creatorId) {
+            hasAccess = true;
+          } else {
+            // Check for entitlement
+            const entitlement = await db.query.entitlements.findFirst({
+              where: (entitlements, { and, eq }) =>
+                and(
+                  eq(entitlements.userId, profile.id),
+                  eq(entitlements.contentId, id)
+                ),
+            });
+            hasAccess = !!entitlement;
+          }
         }
       }
     }
