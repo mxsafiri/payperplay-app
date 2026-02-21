@@ -42,6 +42,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   const [phoneNumber, setPhoneNumber] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((p) => {
@@ -56,6 +57,10 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       if (response.ok) {
         const data = await response.json();
         setContent(data);
+        // If user has access and it's an upload, fetch stream URL
+        if (data.hasAccess && data.contentType === "upload") {
+          fetchStreamUrl(id);
+        }
       } else {
         router.push("/feed");
       }
@@ -64,6 +69,18 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       router.push("/feed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStreamUrl = async (id: string) => {
+    try {
+      const res = await fetch(`/api/content/${id}/stream`);
+      if (res.ok) {
+        const data = await res.json();
+        setStreamUrl(data.streamUrl);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stream URL:", error);
     }
   };
 
@@ -164,6 +181,8 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
 
   const youtubeMedia = content.media.find((m) => m.mediaType === "youtube");
   const embedUrl = youtubeMedia?.url ? getYouTubeEmbedUrl(youtubeMedia.url) : null;
+  const isUpload = content.contentType === "upload";
+  const thumbnailMedia = content.media.find((m) => m.mediaType === "thumbnail");
 
   return (
     <div className="min-h-screen bg-background">
@@ -181,7 +200,17 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Video Player or Locked State */}
-            {content.hasAccess && embedUrl ? (
+            {content.hasAccess && isUpload && streamUrl ? (
+              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                <video
+                  src={streamUrl}
+                  controls
+                  className="w-full h-full"
+                  poster={thumbnailMedia?.url || undefined}
+                  controlsList="nodownload"
+                />
+              </div>
+            ) : content.hasAccess && embedUrl ? (
               <div className="aspect-video rounded-lg overflow-hidden bg-black">
                 <iframe
                   src={embedUrl}
@@ -189,6 +218,13 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
+              </div>
+            ) : content.hasAccess && isUpload && !streamUrl ? (
+              <div className="aspect-video rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                <div className="text-center text-white">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-3"></div>
+                  <p className="text-sm">Loading video...</p>
+                </div>
               </div>
             ) : (
               <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">

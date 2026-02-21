@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { title, description, category, contentType, youtubeUrl, priceTzs } = await req.json();
+    const { title, description, category, contentType, youtubeUrl, priceTzs, videoStorageKey, thumbnailStorageKey } = await req.json();
 
     // Validate
     if (!title || !category || !contentType || !priceTzs) {
@@ -99,6 +99,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (contentType === "upload" && !videoStorageKey) {
+      return NextResponse.json(
+        { error: "Video file is required for uploads" },
+        { status: 400 }
+      );
+    }
+
     // Create content
     const [newContent] = await db
       .insert(content)
@@ -114,7 +121,7 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Add media if YouTube
+    // Add media entries
     if (contentType === "youtube_preview" && youtubeUrl) {
       // Extract YouTube video ID for thumbnail
       let videoId = "";
@@ -132,6 +139,20 @@ export async function POST(req: NextRequest) {
           contentId: newContent.id,
           mediaType: "thumbnail",
           url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        });
+      }
+
+      await db.insert(contentMedia).values(mediaEntries);
+    } else if (contentType === "upload" && videoStorageKey) {
+      const mediaEntries: { contentId: string; mediaType: string; storageKey: string; url?: string }[] = [
+        { contentId: newContent.id, mediaType: "video", storageKey: videoStorageKey },
+      ];
+
+      if (thumbnailStorageKey) {
+        mediaEntries.push({
+          contentId: newContent.id,
+          mediaType: "thumbnail",
+          storageKey: thumbnailStorageKey,
         });
       }
 

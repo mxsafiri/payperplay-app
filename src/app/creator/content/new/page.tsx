@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Youtube, Upload, ArrowLeft } from "lucide-react";
+import { Youtube, Upload, ArrowLeft, FileVideo, X, ImageIcon } from "lucide-react";
+
+const MAX_VIDEO_SIZE_MB = 500;
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const ALLOWED_THUMB_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_THUMB_SIZE_MB = 5;
 
 const CATEGORIES = [
   "Music",
@@ -35,6 +40,84 @@ export default function CreateContentPage() {
   const [selectedPreset, setSelectedPreset] = useState(500);
   const [customPrice, setCustomPrice] = useState("");
 
+  // Upload state
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<"" | "uploading" | "done" | "error">("");
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+      setError("Unsupported format. Use MP4, WebM, or MOV.");
+      return;
+    }
+    if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+      setError(`Video too large. Maximum ${MAX_VIDEO_SIZE_MB}MB.`);
+      return;
+    }
+    setError("");
+    setVideoFile(file);
+    setUploadStatus("");
+  };
+
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_THUMB_TYPES.includes(file.type)) {
+      setError("Unsupported thumbnail format. Use JPEG, PNG, or WebP.");
+      return;
+    }
+    if (file.size > MAX_THUMB_SIZE_MB * 1024 * 1024) {
+      setError(`Thumbnail too large. Maximum ${MAX_THUMB_SIZE_MB}MB.`);
+      return;
+    }
+    setError("");
+    setThumbnailFile(file);
+  };
+
+  const uploadFileToR2 = async (file: File, mediaType: "video" | "thumbnail"): Promise<string> => {
+    // 1. Get presigned URL
+    const presignRes = await fetch("/api/upload/presign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        mediaType,
+      }),
+    });
+    if (!presignRes.ok) {
+      const data = await presignRes.json();
+      throw new Error(data.error || "Failed to get upload URL");
+    }
+    const { uploadUrl, storageKey } = await presignRes.json();
+
+    // 2. Upload directly to R2 with progress
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", uploadUrl);
+      xhr.setRequestHeader("Content-Type", file.type);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && mediaType === "video") {
+          setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`Upload failed with status ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.send(file);
+    });
+
+    return storageKey;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -54,12 +137,39 @@ export default function CreateContentPage() {
         return;
       }
 
+      if (contentType === "upload" && !videoFile) {
+        setError("Please select a video file");
+        setLoading(false);
+        return;
+      }
+
       const priceTzs = priceType === "preset" ? selectedPreset : parseInt(customPrice);
 
       if (!priceTzs || priceTzs < 500) {
         setError("Price must be at least 500 TZS");
         setLoading(false);
         return;
+      }
+
+      // Upload files to R2 if direct upload
+      let videoStorageKey: string | null = null;
+      let thumbnailStorageKey: string | null = null;
+
+      if (contentType === "upload" && videoFile) {
+        setUploadStatus("uploading");
+        setUploadProgress(0);
+        try {
+          videoStorageKey = await uploadFileToR2(videoFile, "video");
+          if (thumbnailFile) {
+            thumbnailStorageKey = await uploadFileToR2(thumbnailFile, "thumbnail");
+          }
+          setUploadStatus("done");
+        } catch (err: unknown) {
+          setUploadStatus("error");
+          setError(err instanceof Error ? err.message : "Upload failed");
+          setLoading(false);
+          return;
+        }
       }
 
       // Create content
@@ -72,6 +182,8 @@ export default function CreateContentPage() {
           category,
           contentType,
           youtubeUrl: contentType === "youtube_preview" ? youtubeUrl : null,
+          videoStorageKey,
+          thumbnailStorageKey,
           priceTzs,
         }),
       });
@@ -219,12 +331,12 @@ export default function CreateContentPage() {
                       contentType === "upload"
                         ? "border-primary bg-primary/10"
                         : "border-border hover:border-primary/50"
-                    } opacity-50 cursor-not-allowed`}
+                    }`}
                   >
-                    <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                    <div className="font-semibold">Upload</div>
+                    <Upload className="w-8 h-8 text-blue-500 mb-2" />
+                    <div className="font-semibold">Upload Video</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Coming soon
+                      MP4, WebM, or MOV up to {MAX_VIDEO_SIZE_MB}MB
                     </div>
                   </button>
                 </div>
@@ -246,6 +358,105 @@ export default function CreateContentPage() {
                     <p className="text-xs text-muted-foreground">
                       Paste the full YouTube video URL
                     </p>
+                  </div>
+                )}
+
+                {contentType === "upload" && (
+                  <div className="space-y-4">
+                    {/* Video file picker */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Video File *</label>
+                      <input
+                        ref={videoInputRef}
+                        type="file"
+                        accept="video/mp4,video/webm,video/quicktime"
+                        onChange={handleVideoSelect}
+                        className="hidden"
+                      />
+                      {videoFile ? (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                          <FileVideo className="w-8 h-8 text-blue-400 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{videoFile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setVideoFile(null); setUploadStatus(""); }}
+                            className="p-1 rounded hover:bg-white/10"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => videoInputRef.current?.click()}
+                          disabled={loading}
+                          className="w-full p-8 rounded-lg border-2 border-dashed border-white/15 hover:border-white/30 transition-colors text-center"
+                        >
+                          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium">Click to select video</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            MP4, WebM, or MOV · Max {MAX_VIDEO_SIZE_MB}MB
+                          </p>
+                        </button>
+                      )}
+
+                      {uploadStatus === "uploading" && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Uploading...</span>
+                            <span>{uploadProgress}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Thumbnail picker (optional) */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Thumbnail (optional)</label>
+                      <input
+                        ref={thumbInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleThumbnailSelect}
+                        className="hidden"
+                      />
+                      {thumbnailFile ? (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                          <ImageIcon className="w-6 h-6 text-green-400 shrink-0" />
+                          <p className="text-sm truncate flex-1">{thumbnailFile.name}</p>
+                          <button
+                            type="button"
+                            onClick={() => setThumbnailFile(null)}
+                            className="p-1 rounded hover:bg-white/10"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => thumbInputRef.current?.click()}
+                          disabled={loading}
+                          className="w-full p-4 rounded-lg border-2 border-dashed border-white/10 hover:border-white/20 transition-colors text-center"
+                        >
+                          <ImageIcon className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground">
+                            JPEG, PNG, or WebP · Max {MAX_THUMB_SIZE_MB}MB
+                          </p>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
                 </div>
