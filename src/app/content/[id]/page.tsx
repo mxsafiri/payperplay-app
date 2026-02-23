@@ -47,7 +47,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   const [previewEnded, setPreviewEnded] = useState(false);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
-  const PREVIEW_SECONDS = 15;
+  const PREVIEW_SECONDS = 10;
 
   useEffect(() => {
     params.then((p) => {
