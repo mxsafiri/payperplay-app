@@ -356,7 +356,8 @@ export default function CreatorDashboard() {
                   return (
                   <div
                     key={item.id}
-                    className="group relative flex items-center gap-4 p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:shadow-lg"
+                    className="group relative flex items-center gap-4 p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:shadow-lg cursor-pointer"
+                    onClick={() => router.push(`/content/${item.id}`)}
                   >
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
@@ -374,7 +375,7 @@ export default function CreatorDashboard() {
                       <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                         <span className="px-2 py-0.5 rounded-md bg-white/5 text-xs">{item.category}</span>
                         <span>{item.viewCount} views</span>
-                        <span className="text-amber-500 font-medium">{item.priceTzs} TZS</span>
+                        <span className="text-amber-500 font-medium">{item.priceTzs === 0 ? "Free" : `${item.priceTzs} TZS`}</span>
                       </div>
                     </div>
                     <div className="relative flex items-center gap-3">
@@ -389,7 +390,7 @@ export default function CreatorDashboard() {
                       >
                         {item.status}
                       </span>
-                      <Link href={`/creator/content/${item.id}/edit`}>
+                      <Link href={`/creator/content/${item.id}/edit`} onClick={(e) => e.stopPropagation()}>
                         <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/10 hover:border-white/20 transition-all">
                           <Pencil className="w-3.5 h-3.5 mr-1" />
                           Edit
