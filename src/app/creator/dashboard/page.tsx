@@ -214,11 +214,9 @@ export default function CreatorDashboard() {
             <ThemeSwitch />
             <span className="text-xs text-muted-foreground">Theme</span>
           </div>
-          <Link href="/feed">
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
-              <Eye className="w-4.5 h-4.5" />
-              View as Fan
-            </button>
+          <Link href="/feed" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
+            <Eye className="w-4.5 h-4.5" />
+            View as Fan
           </Link>
         </div>
       </aside>
@@ -260,11 +258,9 @@ export default function CreatorDashboard() {
               })}
             </nav>
             <div className="p-3 border-t border-white/10">
-              <Link href="/feed" onClick={() => setSidebarOpen(false)}>
-                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
-                  <Eye className="w-4.5 h-4.5" />
-                  View as Fan
-                </button>
+              <Link href="/feed" onClick={() => setSidebarOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
+                <Eye className="w-4.5 h-4.5" />
+                View as Fan
               </Link>
             </div>
           </aside>
