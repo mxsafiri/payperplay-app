@@ -7,6 +7,7 @@ import {
   generateStorageKey,
   MAX_VIDEO_SIZE_BYTES,
   MAX_THUMBNAIL_SIZE_BYTES,
+  MAX_AVATAR_SIZE_BYTES,
   ALLOWED_VIDEO_TYPES,
   ALLOWED_THUMBNAIL_TYPES,
 } from "@/lib/storage/r2";
@@ -25,8 +26,8 @@ export async function POST(req: NextRequest) {
       where: (profiles, { eq }) => eq(profiles.userId, session.user.id),
     });
 
-    if (!profile || profile.role !== "creator") {
-      return NextResponse.json({ error: "Not a creator" }, { status: 403 });
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
     const { fileName, fileType, fileSize, mediaType } = await req.json();
@@ -36,6 +37,11 @@ export async function POST(req: NextRequest) {
         { error: "Missing required fields: fileName, fileType, fileSize, mediaType" },
         { status: 400 }
       );
+    }
+
+    // Only creators can upload video/thumbnail
+    if ((mediaType === "video" || mediaType === "thumbnail") && profile.role !== "creator") {
+      return NextResponse.json({ error: "Not a creator" }, { status: 403 });
     }
 
     // Validate media type
@@ -65,9 +71,22 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+    } else if (mediaType === "avatar") {
+      if (!ALLOWED_THUMBNAIL_TYPES.includes(fileType)) {
+        return NextResponse.json(
+          { error: `Unsupported image format. Allowed: JPEG, PNG, WebP` },
+          { status: 400 }
+        );
+      }
+      if (fileSize > MAX_AVATAR_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: `Avatar too large. Maximum size: ${MAX_AVATAR_SIZE_BYTES / (1024 * 1024)}MB` },
+          { status: 400 }
+        );
+      }
     } else {
       return NextResponse.json(
-        { error: "mediaType must be 'video' or 'thumbnail'" },
+        { error: "mediaType must be 'video', 'thumbnail', or 'avatar'" },
         { status: 400 }
       );
     }

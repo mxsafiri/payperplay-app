@@ -85,7 +85,7 @@ export async function deleteFile(key: string): Promise<void> {
 export function generateStorageKey(params: {
   creatorId: string;
   fileName: string;
-  mediaType: "video" | "thumbnail";
+  mediaType: "video" | "thumbnail" | "avatar";
 }): string {
   const timestamp = Date.now();
   const sanitized = params.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -95,6 +95,7 @@ export function generateStorageKey(params: {
 // Max file sizes
 export const MAX_VIDEO_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB
 export const MAX_THUMBNAIL_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+export const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
