@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Film } from "lucide-react";
+import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 
 interface MediaItem {
   id: string;
@@ -64,6 +65,10 @@ export default function FeedPage() {
 
   return (
     <div className="relative min-h-screen">
+      {/* Subscription Banner */}
+      <div className="relative z-50">
+        <SubscriptionBanner />
+      </div>
       {/* Background Image */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-background" />

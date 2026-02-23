@@ -88,6 +88,12 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       if (res.ok) {
         const data = await res.json();
         setStreamUrl(data.streamUrl);
+      } else if (res.status === 403) {
+        const data = await res.json();
+        if (data.error === "subscription_required") {
+          router.push("/subscribe");
+          return;
+        }
       }
     } catch (error) {
       console.error("Failed to fetch stream URL:", error);

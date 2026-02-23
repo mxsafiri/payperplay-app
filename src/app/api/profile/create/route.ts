@@ -4,6 +4,7 @@ import { profiles, creatorProfiles, creatorWallets } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { activateTrial } from "@/lib/subscription";
 
 export async function POST(req: NextRequest) {
   try {
@@ -89,6 +90,13 @@ export async function POST(req: NextRequest) {
       await db.insert(creatorWallets).values({
         creatorId: profile.id,
       });
+    }
+
+    // Auto-activate 30-day free trial for fan accounts
+    if (role === "fan") {
+      await activateTrial(profile.id).catch((err) =>
+        console.error("Trial activation error:", err)
+      );
     }
 
     return NextResponse.json({ profile }, { status: 201 });

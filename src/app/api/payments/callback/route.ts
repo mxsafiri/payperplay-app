@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { paymentIntents, entitlements, content } from "@/db/schema";
+import { paymentIntents, entitlements, content, platformSubscriptions } from "@/db/schema";
 import { paymentProvider } from "@/lib/payments";
 import { SnippePaymentProvider } from "@/lib/payments/providers/snippe-provider";
 import { creditCreatorWallet } from "@/lib/wallet";
+import { activateWeeklySubscription } from "@/lib/subscription";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
@@ -28,6 +29,18 @@ export async function POST(req: NextRequest) {
 
     // Verify and parse callback from payment provider
     const callbackResult = paymentProvider.verifyCallback(payload);
+
+    // Handle subscription payments (reference starts with "sub_")
+    if (callbackResult.reference.startsWith("sub_") && callbackResult.status === "paid") {
+      // Extract profileId from reference: sub_{profileId}_{timestamp}
+      const parts = callbackResult.reference.split("_");
+      const profileId = parts[1];
+      if (profileId) {
+        await activateWeeklySubscription(profileId, callbackResult.reference);
+        console.log("Subscription activated via callback for profile:", profileId);
+      }
+      return NextResponse.json({ success: true });
+    }
 
     // Find payment intent by reference
     const paymentIntent = await db.query.paymentIntents.findFirst({

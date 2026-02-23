@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getPresignedReadUrl } from "@/lib/storage/r2";
+import { getSubscriptionStatus } from "@/lib/subscription";
 
 export async function GET(
   req: NextRequest,
@@ -28,6 +29,19 @@ export async function GET(
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
+    // Subscription gate: check if user has active platform subscription
+    // Creators are exempt, and preview mode is allowed without subscription
+    const isPreview = req.nextUrl.searchParams.get("preview") === "true";
+    if (profile.role !== "creator" && !isPreview) {
+      const subStatus = await getSubscriptionStatus(profile.id);
+      if (!subStatus.hasAccess) {
+        return NextResponse.json(
+          { error: "subscription_required", message: "An active subscription is required to watch content" },
+          { status: 403 }
+        );
+      }
+    }
+
     // Get content with media
     const contentItem = await db.query.content.findFirst({
       where: (content, { eq }) => eq(content.id, id),
@@ -43,7 +57,6 @@ export async function GET(
     // Free content is accessible to everyone
     const isFree = contentItem.priceTzs === 0;
     const isCreator = contentItem.creatorId === profile.id;
-    const isPreview = req.nextUrl.searchParams.get("preview") === "true";
 
     let hasFullAccess = isFree || isCreator;
 

@@ -8,6 +8,7 @@ export const contentTypeEnum = pgEnum('content_type', ['youtube_preview', 'uploa
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded']);
 export const walletTxTypeEnum = pgEnum('wallet_tx_type', ['earning', 'withdrawal', 'fee', 'refund', 'adjustment']);
 export const walletTxStatusEnum = pgEnum('wallet_tx_status', ['pending', 'completed', 'failed']);
+export const subStatusEnum = pgEnum('sub_status', ['trial', 'active', 'grace', 'expired']);
 
 // Profiles table (extends neon_auth.user)
 export const profiles = pgTable('profiles', {
@@ -202,6 +203,24 @@ export const walletTransactions = pgTable('wallet_transactions', {
   createdAtIdx: index('wallet_tx_created_at_idx').on(table.createdAt),
 }));
 
+// Platform subscriptions (weekly access pass)
+export const platformSubscriptions = pgTable('platform_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  status: subStatusEnum('status').notNull().default('trial'),
+  startsAt: timestamp('starts_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at').notNull(),
+  graceEndsAt: timestamp('grace_ends_at'), // 2 days after expiresAt
+  trialUsed: boolean('trial_used').notNull().default(false),
+  paymentIntentId: text('payment_intent_id'), // Snippe reference for the latest payment
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  profileIdIdx: index('platform_sub_profile_id_idx').on(table.profileId),
+  statusIdx: index('platform_sub_status_idx').on(table.status),
+  expiresAtIdx: index('platform_sub_expires_at_idx').on(table.expiresAt),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   creatorProfile: one(creatorProfiles, {
@@ -211,6 +230,10 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   wallet: one(creatorWallets, {
     fields: [profiles.id],
     references: [creatorWallets.creatorId],
+  }),
+  subscription: one(platformSubscriptions, {
+    fields: [profiles.id],
+    references: [platformSubscriptions.profileId],
   }),
   content: many(content),
   paymentIntents: many(paymentIntents),
@@ -340,5 +363,12 @@ export const playlistItemsRelations = relations(playlistItems, ({ one }) => ({
   content: one(content, {
     fields: [playlistItems.contentId],
     references: [content.id],
+  }),
+}));
+
+export const platformSubscriptionsRelations = relations(platformSubscriptions, ({ one }) => ({
+  profile: one(profiles, {
+    fields: [platformSubscriptions.profileId],
+    references: [profiles.id],
   }),
 }));
