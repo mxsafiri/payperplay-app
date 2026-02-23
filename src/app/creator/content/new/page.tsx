@@ -48,6 +48,61 @@ export default function CreateContentPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
+  const extractVideoThumbnail = (file: File): Promise<File | null> => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.muted = true;
+      video.playsInline = true;
+
+      const url = URL.createObjectURL(file);
+      video.src = url;
+
+      video.onloadeddata = () => {
+        // Seek to 1 second or 10% of duration, whichever is smaller
+        video.currentTime = Math.min(1, video.duration * 0.1);
+      };
+
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { resolve(null); return; }
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(
+            (blob) => {
+              URL.revokeObjectURL(url);
+              if (blob) {
+                const thumbFile = new File([blob], "auto-thumbnail.jpg", { type: "image/jpeg" });
+                resolve(thumbFile);
+              } else {
+                resolve(null);
+              }
+            },
+            "image/jpeg",
+            0.85
+          );
+        } catch {
+          URL.revokeObjectURL(url);
+          resolve(null);
+        }
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+
+      // Timeout fallback
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      }, 10000);
+    });
+  };
+
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -166,9 +221,17 @@ export default function CreateContentPage() {
         setUploadProgress(0);
         try {
           videoStorageKey = await uploadFileToR2(videoFile, "video");
-          if (thumbnailFile) {
-            thumbnailStorageKey = await uploadFileToR2(thumbnailFile, "thumbnail");
+
+          // Upload creator's thumbnail or auto-generate one from the video
+          let thumbToUpload = thumbnailFile;
+          if (!thumbToUpload) {
+            const autoThumb = await extractVideoThumbnail(videoFile);
+            if (autoThumb) thumbToUpload = autoThumb;
           }
+          if (thumbToUpload) {
+            thumbnailStorageKey = await uploadFileToR2(thumbToUpload, "thumbnail");
+          }
+
           setUploadStatus("done");
         } catch (err: unknown) {
           setUploadStatus("error");
