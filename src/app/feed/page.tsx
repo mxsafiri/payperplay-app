@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Film } from "lucide-react";
-import { SubscriptionBanner } from "@/components/SubscriptionBanner";
+import { FanShell } from "@/components/fan/FanShell";
 
 interface MediaItem {
   id: string;
@@ -64,64 +64,21 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="relative min-h-screen">
-      {/* Subscription Banner */}
-      <div className="relative z-50">
-        <SubscriptionBanner />
-      </div>
-      {/* Background Image */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-background" />
-        <Image
-          src="/BG discover.png"
-          alt=""
-          fill
-          className="object-cover opacity-35 dark:opacity-20"
-          sizes="100vw"
-          priority
-        />
-        <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary-500/5 via-transparent to-secondary-500/5 dark:from-primary-500/10 dark:to-secondary-500/10" />
-      </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Discover</h1>
-              <p className="text-sm text-muted-foreground">
-                Exclusive content from your favorite creators
-              </p>
-            </div>
-            {session ? (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/profile"
-                  className="px-4 py-2 rounded-full border border-border bg-background text-foreground text-sm font-medium hover:bg-muted"
-                >
-                  Profile
-                </Link>
-                <Link
-                  href="/library"
-                  className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
-                >
-                  My Library
-                </Link>
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
-              >
-                Sign In
-              </Link>
-            )}
-          </div>
+    <FanShell title="Discover" subtitle="Exclusive content from your favorite creators">
+      <div className="relative">
+        <div className="absolute inset-0 -z-10">
+          <Image
+            src="/BG discover.png"
+            alt=""
+            fill
+            className="object-cover opacity-35 dark:opacity-20"
+            sizes="100vw"
+            priority
+          />
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary-500/5 via-transparent to-secondary-500/5 dark:from-primary-500/10 dark:to-secondary-500/10" />
         </div>
-      </header>
 
-      <main className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Category Filters */}
         <div className="mb-8">
           <div className="flex w-full justify-start sm:justify-center">
@@ -258,7 +215,7 @@ export default function FeedPage() {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </FanShell>
   );
 }

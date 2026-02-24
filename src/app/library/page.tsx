@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { placeholderCreators } from "@/data/placeholder-creators";
+import { FanShell } from "@/components/fan/FanShell";
 
 interface LibraryContent {
   id: string;
@@ -69,27 +70,7 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">My Library</h1>
-              <p className="text-sm text-muted-foreground">
-                Content you've purchased
-              </p>
-            </div>
-            <Link href="/feed">
-              <button className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
-                Discover More
-              </button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <FanShell title="My Library" subtitle="Content you've purchased">
         {content.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">📚</div>
@@ -168,7 +149,6 @@ export default function LibraryPage() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </FanShell>
   );
 }

@@ -7,6 +7,7 @@ import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Camera, Crown, Loader2, Save } from "lucide-react";
+import { FanShell } from "@/components/fan/FanShell";
 
 interface Profile {
   id: string;
@@ -211,21 +212,8 @@ export default function FanProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 backdrop-blur">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button variant="outline" onClick={() => router.push("/subscribe")}>
-            <Crown className="w-4 h-4 mr-2" />
-            Manage Subscription
-          </Button>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <FanShell title="Profile" subtitle="Manage your account and subscription">
+      <div className="max-w-3xl mx-auto space-y-6">
         <div className="rounded-2xl border bg-card p-6">
           <div className="flex items-start gap-5">
             <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted shrink-0">
@@ -298,7 +286,7 @@ export default function FanProfilePage() {
             </Button>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </FanShell>
   );
 }
