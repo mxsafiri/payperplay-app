@@ -49,26 +49,6 @@ export function HeroSection() {
             >
               Play Content
             </a>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href="#app-store"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-200 bg-white/60 px-4 text-sm font-medium text-neutral-900 backdrop-blur hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-100 dark:hover:bg-neutral-950"
-              >
-                App Store
-              </a>
-              <a
-                href="#google-play"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-200 bg-white/60 px-4 text-sm font-medium text-neutral-900 backdrop-blur hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-100 dark:hover:bg-neutral-950"
-              >
-                Google Play
-              </a>
-              <a
-                href="#app-gallery"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-200 bg-white/60 px-4 text-sm font-medium text-neutral-900 backdrop-blur hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-100 dark:hover:bg-neutral-950"
-              >
-                App Gallery
-              </a>
-            </div>
           </div>
         </div>
 
