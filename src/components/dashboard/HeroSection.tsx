@@ -35,6 +35,7 @@ export function HeroSection() {
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-4xl lg:text-6xl">
             <Typewriter
               texts={["Create, post and get-paid!", "Discover new content everyday!"]}
+              highlights={["get-paid!", "everyday!"]}
               speed={70}
             />
           </h1>

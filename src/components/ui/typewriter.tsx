@@ -7,11 +7,15 @@ export function Typewriter({
   texts,
   speed = 80,
   className,
+  highlights,
+  highlightClass = "text-primary-500",
 }: {
   text?: string;
   texts?: string[];
   speed?: number;
   className?: string;
+  highlights?: string[];
+  highlightClass?: string;
 }) {
   const phrases = texts && texts.length > 0 ? texts : text ? [text] : [""];
   const [displayed, setDisplayed] = useState("");
@@ -69,9 +73,23 @@ export function Typewriter({
     };
   }, [phrases.join("|"), speed]);
 
+  const renderHighlighted = (str: string) => {
+    if (!highlights || highlights.length === 0) return str;
+    const pattern = new RegExp(`(${highlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+    const parts = str.split(pattern);
+    return parts.map((part, i) => {
+      const isHL = highlights.some(h => h.toLowerCase() === part.toLowerCase());
+      return isHL ? (
+        <span key={i} className={highlightClass}>{part}</span>
+      ) : (
+        <span key={i}>{part}</span>
+      );
+    });
+  };
+
   return (
     <span className={className}>
-      {displayed}
+      {renderHighlighted(displayed)}
       <span
         className={`inline-block w-[3px] h-[1em] ml-0.5 align-middle bg-current ${
           done ? "animate-pulse" : "animate-[blink_0.6s_step-end_infinite]"
