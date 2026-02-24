@@ -170,7 +170,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
         const response = await fetch(`/api/payments/status/${paymentIntentId}`);
         const data = await response.json();
 
-        if (data.status === "paid") {
+        if (data.status === "paid" && data.hasEntitlement) {
           clearInterval(interval);
           setPaymentLoading(false);
           // Refresh content to show unlocked state

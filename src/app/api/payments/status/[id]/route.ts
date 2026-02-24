@@ -58,74 +58,97 @@ export async function GET(
       );
     }
 
-    // If still pending, actively check the provider for the real status
+    // If still pending, check provider for the real status.
+    // Only grant entitlements when the provider confirms REAL payment completion
+    // (status === "paid" AND paidAt is set, meaning completed_at from Snippe).
     if (paymentIntent.status === "pending" && paymentIntent.providerReference) {
       try {
         const providerStatus = await paymentProvider.checkStatus(paymentIntent.providerReference);
 
-        if (providerStatus.status === "paid" || providerStatus.status === "failed") {
-          // Update our DB with the real status
+        console.log("Polling status for", paymentIntent.id, "→", providerStatus.status, "paidAt:", providerStatus.paidAt);
+
+        if (providerStatus.status === "failed") {
+          await db
+            .update(paymentIntents)
+            .set({ status: "failed" })
+            .where(eq(paymentIntents.id, paymentIntent.id));
+
+          paymentIntent = await db.query.paymentIntents.findFirst({
+            where: eq(paymentIntents.id, id),
+          });
+        } else if (providerStatus.status === "paid" && providerStatus.paidAt) {
+          // Only trust "paid" when a completed_at timestamp is present,
+          // which means the payment was actually confirmed by the MNO.
           await db
             .update(paymentIntents)
             .set({
-              status: providerStatus.status,
-              paidAt: providerStatus.status === "paid" ? (providerStatus.paidAt || new Date()) : null,
+              status: "paid",
+              paidAt: providerStatus.paidAt,
             })
             .where(eq(paymentIntents.id, paymentIntent.id));
 
-          // If paid, grant entitlement + credit creator wallet
-          if (providerStatus.status === "paid") {
-            const existingEntitlement = await db.query.entitlements.findFirst({
-              where: (ent, { and, eq }) =>
-                and(
-                  eq(ent.userId, paymentIntent!.userId),
-                  eq(ent.contentId, paymentIntent!.contentId)
-                ),
+          // Grant entitlement
+          const existingEntitlement = await db.query.entitlements.findFirst({
+            where: (ent, { and, eq }) =>
+              and(
+                eq(ent.userId, paymentIntent!.userId),
+                eq(ent.contentId, paymentIntent!.contentId)
+              ),
+          });
+
+          if (!existingEntitlement) {
+            await db.insert(entitlements).values({
+              userId: paymentIntent!.userId,
+              contentId: paymentIntent!.contentId,
+              paymentIntentId: paymentIntent!.id,
             });
 
-            if (!existingEntitlement) {
-              await db.insert(entitlements).values({
-                userId: paymentIntent.userId,
-                contentId: paymentIntent.contentId,
-                paymentIntentId: paymentIntent.id,
-              });
+            const contentItem = await db.query.content.findFirst({
+              where: eq(content.id, paymentIntent!.contentId),
+            });
 
-              const contentItem = await db.query.content.findFirst({
-                where: eq(content.id, paymentIntent.contentId),
-              });
-
-              if (contentItem) {
-                await creditCreatorWallet({
-                  creatorId: contentItem.creatorId,
-                  amountTzs: paymentIntent.amountTzs,
-                  paymentIntentId: paymentIntent.id,
-                  contentTitle: contentItem.title,
-                });
-              }
-
-              console.log("Payment confirmed via polling:", {
-                paymentIntentId: paymentIntent.id,
-                userId: paymentIntent.userId,
-                contentId: paymentIntent.contentId,
+            if (contentItem) {
+              await creditCreatorWallet({
+                creatorId: contentItem.creatorId,
+                amountTzs: paymentIntent!.amountTzs,
+                paymentIntentId: paymentIntent!.id,
+                contentTitle: contentItem.title,
               });
             }
+
+            console.log("Payment confirmed via polling (with paidAt):", {
+              paymentIntentId: paymentIntent!.id,
+              paidAt: providerStatus.paidAt,
+            });
           }
 
-          // Re-read the updated payment intent
           paymentIntent = await db.query.paymentIntents.findFirst({
             where: eq(paymentIntents.id, id),
           });
         }
+        // If status is "paid" but NO paidAt — treat as still pending (not yet confirmed by MNO)
       } catch (pollError) {
         console.error("Provider status poll error:", pollError);
       }
     }
+
+    // Check if entitlement exists (webhook may have granted it)
+    const hasEntitlement = paymentIntent!.status === "paid"
+      ? !!(await db.query.entitlements.findFirst({
+          where: (ent, { and, eq }) =>
+            and(
+              eq(ent.userId, paymentIntent!.userId),
+              eq(ent.contentId, paymentIntent!.contentId)
+            ),
+        }))
+      : false;
 
     return NextResponse.json({
       id: paymentIntent!.id,
       status: paymentIntent!.status,
       amount: paymentIntent!.amountTzs,
       paidAt: paymentIntent!.paidAt,
+      hasEntitlement,
     });
   } catch (error) {
     console.error("Payment status check error:", error);

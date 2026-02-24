@@ -165,7 +165,10 @@ export class SnippePaymentProvider extends BasePaymentProvider {
         httpStatus: response.status,
         apiStatus: result.status,
         paymentStatus: result.data?.status,
+        completedAt: result.data?.completed_at,
+        settlement: result.data?.settlement,
         reference: providerReference,
+        fullData: JSON.stringify(result.data),
       });
 
       if (result.status !== 'success' || !result.data) {
