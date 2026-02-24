@@ -95,16 +95,26 @@ export default function FeedPage() {
               </p>
             </div>
             {session ? (
-              <Link href="/library">
-                <button className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/profile"
+                  className="px-4 py-2 rounded-full border border-border bg-background text-foreground text-sm font-medium hover:bg-muted"
+                >
+                  Profile
+                </Link>
+                <Link
+                  href="/library"
+                  className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
                   My Library
-                </button>
-              </Link>
+                </Link>
+              </div>
             ) : (
-              <Link href="/login">
-                <button className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
-                  Sign In
-                </button>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+              >
+                Sign In
               </Link>
             )}
           </div>

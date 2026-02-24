@@ -23,7 +23,30 @@ export function SubscriptionBanner() {
 
   // Active subscription with plenty of time — no banner needed
   if (sub.status === "active" && sub.daysRemaining > 3) return null;
-  if (sub.status === "trial" && sub.daysRemaining > 5) return null;
+
+  // Trial active (informational)
+  if (sub.status === "trial" && sub.daysRemaining > 5) {
+    return (
+      <div className="bg-primary/5 border-b border-primary/20 px-4 py-2.5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Crown className="w-4 h-4 text-primary shrink-0" />
+            <span>
+              <strong>Free trial active</strong> — {sub.daysRemaining} day{sub.daysRemaining !== 1 ? "s" : ""} remaining.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => router.push("/subscribe")}>
+              Manage
+            </Button>
+            <button onClick={() => setDismissed(true)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Trial ending soon
   if (sub.status === "trial" && sub.daysRemaining <= 5) {
