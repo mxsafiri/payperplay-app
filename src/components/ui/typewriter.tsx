@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function Typewriter({
   text,
+  texts,
   speed = 80,
   className,
 }: {
-  text: string;
+  text?: string;
+  texts?: string[];
   speed?: number;
   className?: string;
 }) {
+  const phrases = texts && texts.length > 0 ? texts : text ? [text] : [""];
   const [displayed, setDisplayed] = useState("");
   const [done, setDone] = useState(false);
+  const indexRef = useRef(0);
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
@@ -21,6 +25,7 @@ export function Typewriter({
 
     const run = () => {
       if (cancelled) return;
+      const current = phrases[indexRef.current % phrases.length];
       setDisplayed("");
       setDone(false);
 
@@ -29,8 +34,8 @@ export function Typewriter({
       interval = setInterval(() => {
         if (cancelled) return;
         i++;
-        setDisplayed(text.slice(0, i));
-        if (i >= text.length) {
+        setDisplayed(current.slice(0, i));
+        if (i >= current.length) {
           clearInterval(interval);
           setDone(true);
 
@@ -38,14 +43,16 @@ export function Typewriter({
           timeout = setTimeout(() => {
             if (cancelled) return;
             setDone(false);
-            let j = text.length;
+            let j = current.length;
             interval = setInterval(() => {
               if (cancelled) return;
               j--;
-              setDisplayed(text.slice(0, j));
+              setDisplayed(current.slice(0, j));
               if (j <= 0) {
                 clearInterval(interval);
-                // Pause, then restart
+                // Move to next phrase
+                indexRef.current++;
+                // Pause, then restart with next phrase
                 timeout = setTimeout(run, 800);
               }
             }, 30);
@@ -60,7 +67,7 @@ export function Typewriter({
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [text, speed]);
+  }, [phrases.join("|"), speed]);
 
   return (
     <span className={className}>
