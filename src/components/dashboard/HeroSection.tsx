@@ -40,7 +40,7 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-4 max-w-xl text-base text-neutral-700 dark:text-neutral-300 sm:text-lg">
-            Discover creators, pay per play, and turn every moment into a premium experience.
+            Create, post and get-paid!
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
