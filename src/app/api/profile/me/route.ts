@@ -4,6 +4,7 @@ import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 export async function GET() {
   try {
@@ -32,7 +33,11 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ profile });
+    const resolvedAvatarUrl = await resolveAvatarUrl(profile.avatarUrl);
+
+    return NextResponse.json({
+      profile: { ...profile, avatarUrl: resolvedAvatarUrl },
+    });
   } catch (error) {
     console.error("Profile fetch error:", error);
     return NextResponse.json(

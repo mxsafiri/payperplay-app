@@ -4,6 +4,7 @@ import { content } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 export async function GET(
   req: NextRequest,
@@ -78,6 +79,10 @@ export async function GET(
 
     return NextResponse.json({
       ...contentItem,
+      creator: {
+        ...contentItem.creator,
+        avatarUrl: await resolveAvatarUrl(contentItem.creator?.avatarUrl),
+      },
       hasAccess,
     });
   } catch (error) {

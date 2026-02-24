@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 export async function GET() {
   try {
@@ -47,17 +48,22 @@ export async function GET() {
       orderBy: (entitlements, { desc }) => [desc(entitlements.grantedAt)],
     });
 
-    // Transform to library format
-    const library = entitlements
-      .filter((e) => e.content)
-      .map((e) => ({
-        id: e.content!.id,
-        title: e.content!.title,
-        category: e.content!.category,
-        priceTzs: e.content!.priceTzs,
-        creator: e.content!.creator,
-        grantedAt: e.grantedAt,
-      }));
+    // Transform to library format and resolve avatar URLs
+    const library = await Promise.all(
+      entitlements
+        .filter((e) => e.content)
+        .map(async (e) => ({
+          id: e.content!.id,
+          title: e.content!.title,
+          category: e.content!.category,
+          priceTzs: e.content!.priceTzs,
+          creator: {
+            ...e.content!.creator,
+            avatarUrl: await resolveAvatarUrl(e.content!.creator?.avatarUrl),
+          },
+          grantedAt: e.grantedAt,
+        }))
+    );
 
     return NextResponse.json({ content: library });
   } catch (error) {

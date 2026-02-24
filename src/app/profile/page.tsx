@@ -158,19 +158,11 @@ export default function FanProfilePage() {
         xhr.send(file);
       });
 
-      const readRes = await fetch("/api/upload/presign/read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storageKey }),
-      });
-
-      const avatarReadUrl = readRes.ok ? (await readRes.json()).url : `r2://${storageKey}`;
-      setAvatarUrl(avatarReadUrl);
-
+      // Save the R2 storage key as avatarUrl — the backend generates fresh presigned URLs
       await fetch("/api/profile/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatarUrl: avatarReadUrl }),
+        body: JSON.stringify({ avatarUrl: `r2://${storageKey}` }),
       });
 
       await fetchProfile();

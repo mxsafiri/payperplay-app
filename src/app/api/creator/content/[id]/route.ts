@@ -4,6 +4,7 @@ import { content, comments } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, and, desc } from "drizzle-orm";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 export async function GET(
   req: NextRequest,
@@ -56,7 +57,15 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ content: contentItem });
+    // Resolve avatar URLs in comments
+    const resolvedComments = await Promise.all(
+      (contentItem.comments || []).map(async (c: any) => ({
+        ...c,
+        user: { ...c.user, avatarUrl: await resolveAvatarUrl(c.user?.avatarUrl) },
+      }))
+    );
+
+    return NextResponse.json({ content: { ...contentItem, comments: resolvedComments } });
   } catch (error) {
     console.error("Content fetch error:", error);
     return NextResponse.json(

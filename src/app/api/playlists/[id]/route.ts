@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { playlists } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 // GET /api/playlists/[id] — public playlist view for fans
 export async function GET(
@@ -59,6 +60,10 @@ export async function GET(
 
     return NextResponse.json({
       ...playlist,
+      creator: {
+        ...playlist.creator,
+        avatarUrl: await resolveAvatarUrl(playlist.creator?.avatarUrl),
+      },
       items: filteredItems,
       itemCount: filteredItems.length,
     });

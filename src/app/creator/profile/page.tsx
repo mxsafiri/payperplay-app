@@ -124,19 +124,11 @@ export default function ProfileSettingsPage() {
         body: JSON.stringify({ storageKey }),
       });
 
-      // For now, use the storage key and we'll generate the URL on the fly
-      // Save the storage key as the avatar URL
-      const avatarReadUrl = readRes.ok
-        ? (await readRes.json()).url
-        : `r2://${storageKey}`;
-
-      setAvatarUrl(avatarReadUrl);
-
-      // Auto-save avatar to profile
+      // Save the R2 storage key as avatarUrl — the backend generates fresh presigned URLs
       await fetch("/api/profile/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatarUrl: avatarReadUrl }),
+        body: JSON.stringify({ avatarUrl: `r2://${storageKey}` }),
       });
 
       setSaveSuccess(true);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { content } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,7 +51,18 @@ export async function GET(req: NextRequest) {
       contentList = await query;
     }
 
-    return NextResponse.json({ content: contentList });
+    // Resolve r2:// avatar URLs to fresh presigned URLs
+    const resolved = await Promise.all(
+      contentList.map(async (item: any) => ({
+        ...item,
+        creator: {
+          ...item.creator,
+          avatarUrl: await resolveAvatarUrl(item.creator?.avatarUrl),
+        },
+      }))
+    );
+
+    return NextResponse.json({ content: resolved });
   } catch (error) {
     console.error("Content fetch error:", error);
     return NextResponse.json(
