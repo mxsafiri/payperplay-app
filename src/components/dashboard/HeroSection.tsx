@@ -34,13 +34,13 @@ export function HeroSection() {
 
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-4xl lg:text-6xl">
             <Typewriter
-              text="Discover creators, pay per play, and turn every moment into a premium experience."
+              text="Create, post and get-paid!"
               speed={70}
             />
           </h1>
 
           <p className="mt-4 max-w-xl text-base text-neutral-700 dark:text-neutral-300 sm:text-lg">
-            Create, post and get-paid!
+            Discover creators, pay per play, and turn every moment into a premium experience.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
