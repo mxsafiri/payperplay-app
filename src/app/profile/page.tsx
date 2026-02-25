@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Camera, Crown, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Camera, Crown, Loader2, Save, Users } from "lucide-react";
 import { FanShell } from "@/components/fan/FanShell";
 
 interface Profile {
@@ -50,12 +50,16 @@ export default function FanProfilePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [following, setFollowing] = useState<
+    Array<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }>
+  >([]);
+
   useEffect(() => {
     if (!session) {
       router.push("/login");
       return;
     }
-    void Promise.all([fetchProfile(), fetchSubStatus()]).finally(() => setLoading(false));
+    void Promise.all([fetchProfile(), fetchSubStatus(), fetchFollowing()]).finally(() => setLoading(false));
   }, [session, router]);
 
   const fetchProfile = async () => {
@@ -74,6 +78,33 @@ export default function FanProfilePage() {
     if (!res.ok) return;
     const data = (await res.json()) as SubStatus;
     setSub(data);
+  };
+
+  const fetchFollowing = async () => {
+    try {
+      const res = await fetch("/api/follow/following");
+      if (res.ok) {
+        const data = await res.json();
+        setFollowing(data.following || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch following:", error);
+    }
+  };
+
+  const handleUnfollow = async (creatorId: string) => {
+    try {
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorId }),
+      });
+      if (res.ok) {
+        setFollowing((prev) => prev.filter((c) => c.id !== creatorId));
+      }
+    } catch (error) {
+      console.error("Failed to unfollow:", error);
+    }
   };
 
   const handleSave = async () => {
@@ -265,6 +296,57 @@ export default function FanProfilePage() {
               Save
             </Button>
           </div>
+        </div>
+
+        {/* Following Section */}
+        <div className="rounded-2xl border bg-card p-6">
+          <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Following
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {following.length === 0
+              ? "You're not following any creators yet."
+              : `Following ${following.length} creator${following.length !== 1 ? "s" : ""}`}
+          </p>
+
+          {following.length > 0 && (
+            <div className="space-y-3">
+              {following.map((creator) => (
+                <div key={creator.id} className="flex items-center gap-3">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted shrink-0">
+                    {creator.avatarUrl ? (
+                      <Image
+                        src={creator.avatarUrl}
+                        alt={creator.displayName || creator.handle}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm font-bold">
+                        {(creator.displayName || creator.handle).charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {creator.displayName || `@${creator.handle}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">@{creator.handle}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleUnfollow(creator.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    Unfollow
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border bg-card p-6">

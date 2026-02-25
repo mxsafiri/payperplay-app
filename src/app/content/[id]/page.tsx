@@ -46,6 +46,9 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewEnded, setPreviewEnded] = useState(false);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const PREVIEW_SECONDS = 10;
 
@@ -56,12 +59,47 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
     });
   }, [params]);
 
+  const fetchFollowStatus = async (creatorId: string) => {
+    try {
+      const res = await fetch(`/api/follow?creatorId=${creatorId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setIsFollowing(data.isFollowing);
+        setFollowerCount(data.followerCount);
+      }
+    } catch (error) {
+      console.error("Failed to fetch follow status:", error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!session || !content) return;
+    setFollowLoading(true);
+    try {
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorId: content.creator.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsFollowing(data.isFollowing);
+        setFollowerCount(data.followerCount);
+      }
+    } catch (error) {
+      console.error("Failed to toggle follow:", error);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   const fetchContent = async (id: string) => {
     try {
       const response = await fetch(`/api/content/${id}`);
       if (response.ok) {
         const data = await response.json();
         setContent(data);
+        fetchFollowStatus(data.creator.id);
         if (data.contentType === "upload") {
           if (data.hasAccess) {
             // Full access — fetch full stream URL
@@ -364,9 +402,20 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                   <h3 className="font-semibold">
                     {content.creator.displayName || `@${content.creator.handle}`}
                   </h3>
-                  <p className="text-sm text-muted-foreground">Creator</p>
+                  <p className="text-sm text-muted-foreground">
+                    Creator{followerCount > 0 ? ` · ${followerCount} follower${followerCount !== 1 ? "s" : ""}` : ""}
+                  </p>
                 </div>
-                <Button variant="outline">Follow</Button>
+                {session && content.creator.id && (
+                  <Button
+                    variant={isFollowing ? "secondary" : "outline"}
+                    onClick={handleFollowToggle}
+                    disabled={followLoading}
+                    className="min-w-[100px]"
+                  >
+                    {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
