@@ -194,17 +194,32 @@ export class SnippePaymentProvider extends BasePaymentProvider {
 
   /**
    * Verify webhook signature using HMAC-SHA256
+   * Snippe signs: HMAC-SHA256(secret, timestamp + "." + rawBody)
    */
-  static verifySignature(rawBody: string, signature: string, secret: string): boolean {
-    const expectedSignature = crypto
+  static verifySignature(rawBody: string, signature: string, secret: string, timestamp?: string): boolean {
+    // Primary: sign timestamp.body (Snippe's format)
+    if (timestamp) {
+      const signedPayload = `${timestamp}.${rawBody}`;
+      const expected = crypto
+        .createHmac('sha256', secret)
+        .update(signedPayload)
+        .digest('hex');
+      try {
+        if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+          return true;
+        }
+      } catch { /* length mismatch, try next */ }
+    }
+
+    // Fallback: sign body only
+    const expectedBodyOnly = crypto
       .createHmac('sha256', secret)
       .update(rawBody)
       .digest('hex');
-
     try {
       return crypto.timingSafeEqual(
         Buffer.from(signature),
-        Buffer.from(expectedSignature),
+        Buffer.from(expectedBodyOnly),
       );
     } catch {
       return false;
