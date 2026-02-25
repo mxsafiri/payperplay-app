@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { paymentIntents, entitlements, content } from "@/db/schema";
+import { paymentIntents, content } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { paymentProvider } from "@/lib/payments";
-import { creditCreatorWallet } from "@/lib/wallet";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
@@ -116,38 +115,6 @@ export async function POST(req: NextRequest) {
       .update(paymentIntents)
       .set({ providerReference: paymentResult.providerReference })
       .where(eq(paymentIntents.id, paymentIntent.id));
-
-    // Mock provider: auto-confirm payment after a short delay
-    if (paymentProvider.name === "mock") {
-      setTimeout(async () => {
-        try {
-          // Mark payment as paid
-          await db
-            .update(paymentIntents)
-            .set({ status: "paid", paidAt: new Date() })
-            .where(eq(paymentIntents.id, paymentIntent.id));
-
-          // Grant entitlement
-          await db.insert(entitlements).values({
-            userId: profile.id,
-            contentId,
-            paymentIntentId: paymentIntent.id,
-          });
-
-          // Credit creator's wallet
-          await creditCreatorWallet({
-            creatorId: contentItem.creatorId,
-            amountTzs: contentItem.priceTzs,
-            paymentIntentId: paymentIntent.id,
-            contentTitle: contentItem.title,
-          });
-
-          console.log("Mock payment auto-confirmed:", paymentIntent.id);
-        } catch (err) {
-          console.error("Mock auto-confirm error:", err);
-        }
-      }, 2000);
-    }
 
     return NextResponse.json({
       paymentIntentId: paymentIntent.id,

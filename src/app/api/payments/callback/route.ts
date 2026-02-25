@@ -11,18 +11,24 @@ export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
 
-    // Verify Snippe webhook signature if using Snippe provider
-    if (paymentProvider.name === "snippe") {
-      const signature = req.headers.get("x-webhook-signature") || "";
-      const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET || "";
+    // Verify Snippe webhook signature — MANDATORY in production
+    const signature = req.headers.get("x-webhook-signature") || "";
+    const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET || "";
 
-      if (webhookSecret && !SnippePaymentProvider.verifySignature(rawBody, signature, webhookSecret)) {
-        console.error("Invalid webhook signature");
-        return NextResponse.json(
-          { error: "Invalid signature" },
-          { status: 401 }
-        );
-      }
+    if (!webhookSecret) {
+      console.error("PAYMENT_WEBHOOK_SECRET is not configured — rejecting callback");
+      return NextResponse.json(
+        { error: "Webhook not configured" },
+        { status: 500 }
+      );
+    }
+
+    if (!SnippePaymentProvider.verifySignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid webhook signature");
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 }
+      );
     }
 
     const payload = JSON.parse(rawBody);

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { paymentIntents, entitlements, content } from "@/db/schema";
+import { paymentIntents } from "@/db/schema";
 import { paymentProvider } from "@/lib/payments";
-import { creditCreatorWallet } from "@/lib/wallet";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
@@ -58,14 +57,15 @@ export async function GET(
       );
     }
 
-    // If still pending, check provider for the real status.
-    // Only grant entitlements when the provider confirms REAL payment completion
-    // (status === "paid" AND paidAt is set, meaning completed_at from Snippe).
+    // If still pending, check provider for failures only.
+    // Entitlements are ONLY granted by the webhook callback — never by polling.
+    // Snippe's checkStatus returns "completed" even before the user confirms
+    // payment on their phone, so we cannot trust it for granting access.
     if (paymentIntent.status === "pending" && paymentIntent.providerReference) {
       try {
         const providerStatus = await paymentProvider.checkStatus(paymentIntent.providerReference);
 
-        console.log("Polling status for", paymentIntent.id, "→", providerStatus.status, "paidAt:", providerStatus.paidAt);
+        console.log("Polling status for", paymentIntent.id, "→", providerStatus.status);
 
         if (providerStatus.status === "failed") {
           await db
@@ -76,57 +76,8 @@ export async function GET(
           paymentIntent = await db.query.paymentIntents.findFirst({
             where: eq(paymentIntents.id, id),
           });
-        } else if (providerStatus.status === "paid" && providerStatus.paidAt) {
-          // Only trust "paid" when a completed_at timestamp is present,
-          // which means the payment was actually confirmed by the MNO.
-          await db
-            .update(paymentIntents)
-            .set({
-              status: "paid",
-              paidAt: providerStatus.paidAt,
-            })
-            .where(eq(paymentIntents.id, paymentIntent.id));
-
-          // Grant entitlement
-          const existingEntitlement = await db.query.entitlements.findFirst({
-            where: (ent, { and, eq }) =>
-              and(
-                eq(ent.userId, paymentIntent!.userId),
-                eq(ent.contentId, paymentIntent!.contentId)
-              ),
-          });
-
-          if (!existingEntitlement) {
-            await db.insert(entitlements).values({
-              userId: paymentIntent!.userId,
-              contentId: paymentIntent!.contentId,
-              paymentIntentId: paymentIntent!.id,
-            });
-
-            const contentItem = await db.query.content.findFirst({
-              where: eq(content.id, paymentIntent!.contentId),
-            });
-
-            if (contentItem) {
-              await creditCreatorWallet({
-                creatorId: contentItem.creatorId,
-                amountTzs: paymentIntent!.amountTzs,
-                paymentIntentId: paymentIntent!.id,
-                contentTitle: contentItem.title,
-              });
-            }
-
-            console.log("Payment confirmed via polling (with paidAt):", {
-              paymentIntentId: paymentIntent!.id,
-              paidAt: providerStatus.paidAt,
-            });
-          }
-
-          paymentIntent = await db.query.paymentIntents.findFirst({
-            where: eq(paymentIntents.id, id),
-          });
         }
-        // If status is "paid" but NO paidAt — treat as still pending (not yet confirmed by MNO)
+        // Do NOT grant entitlements here — only the webhook callback can do that
       } catch (pollError) {
         console.error("Provider status poll error:", pollError);
       }
