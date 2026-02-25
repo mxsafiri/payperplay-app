@@ -18,8 +18,8 @@ import {
 } from "@/data/dashboard";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Premium creator-first content hub experience.",
+  title: "PayPerPlay",
+  description: "Create, post and get paid. Tanzania's creator-first platform for premium content.",
 };
 
 export default function DashboardPage() {

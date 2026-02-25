@@ -25,8 +25,8 @@ type ThemeTokens = {
 export const appConfig = {
   site: {
     name: "PayPerPlay",
-    description: "Starter kit for modern Next.js apps.",
-    url: "https://example.com",
+    description: "Create, post and get paid. Tanzania's creator-first platform for premium content.",
+    url: "https://www.payperplay.xyz",
     locale: "en",
   },
   brand: {
