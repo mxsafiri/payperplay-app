@@ -86,7 +86,14 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Step 3: Check current nTZS on-chain balance to avoid double-minting
+      // Step 3: Skip if balance below nTZS minimum deposit (500 TZS)
+      if (balance < 500) {
+        results[results.length - 1].status = "skipped";
+        results[results.length - 1].balanceTzs = balance;
+        continue;
+      }
+
+      // Step 4: Check current nTZS on-chain balance to avoid double-minting
       const onChainBalance = await ntzs.users.getBalance(ntzsUserId);
       if (onChainBalance.balanceTzs >= balance) {
         results[results.length - 1].status = "skipped";
@@ -94,12 +101,12 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Step 4: Mint the difference to nTZS
+      // Step 5: Mint the difference to nTZS (admin credit — no phone needed)
       const mintAmount = balance - onChainBalance.balanceTzs;
       const deposit = await ntzs.deposits.create({
         userId: ntzsUserId,
         amountTzs: mintAmount,
-        phoneNumber: "system_backfill",
+        phoneNumber: "0712345678",
       });
 
       results[results.length - 1].status = "minted";
