@@ -262,7 +262,7 @@ export const platformSubscriptions = pgTable('platform_subscriptions', {
   expiresAt: timestamp('expires_at').notNull(),
   graceEndsAt: timestamp('grace_ends_at'), // 2 days after expiresAt
   trialUsed: boolean('trial_used').notNull().default(false),
-  paymentIntentId: text('payment_intent_id'), // Snippe reference for the latest payment
+  paymentIntentId: text('payment_intent_id'), // nTZS reference for the latest payment
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({

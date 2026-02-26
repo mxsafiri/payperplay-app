@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { paymentIntents } from "@/db/schema";
-import { paymentProvider } from "@/lib/payments";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
@@ -57,33 +56,10 @@ export async function GET(
       );
     }
 
-    // If still pending, check provider for failures only.
-    // Entitlements are ONLY granted by the webhook callback — never by polling.
-    // Snippe's checkStatus returns "completed" even before the user confirms
-    // payment on their phone, so we cannot trust it for granting access.
-    if (paymentIntent.status === "pending" && paymentIntent.providerReference) {
-      try {
-        const providerStatus = await paymentProvider.checkStatus(paymentIntent.providerReference);
+    // nTZS transfers are immediate — status is set synchronously in /api/payments/initiate.
+    // No provider polling needed.
 
-        console.log("Polling status for", paymentIntent.id, "→", providerStatus.status);
-
-        if (providerStatus.status === "failed") {
-          await db
-            .update(paymentIntents)
-            .set({ status: "failed" })
-            .where(eq(paymentIntents.id, paymentIntent.id));
-
-          paymentIntent = await db.query.paymentIntents.findFirst({
-            where: eq(paymentIntents.id, id),
-          });
-        }
-        // Do NOT grant entitlements here — only the webhook callback can do that
-      } catch (pollError) {
-        console.error("Provider status poll error:", pollError);
-      }
-    }
-
-    // Check if entitlement exists (webhook may have granted it)
+    // Check if entitlement exists
     const hasEntitlement = paymentIntent!.status === "paid"
       ? !!(await db.query.entitlements.findFirst({
           where: (ent, { and, eq }) =>
