@@ -24,6 +24,8 @@ interface WalletData {
     totalEarned: number;
     totalWithdrawn: number;
     totalFees: number;
+    ntzsBalance: number | null;
+    ntzsWalletAddress: string | null;
   };
   transactions: {
     id: string;
@@ -435,6 +437,19 @@ export default function CreatorDashboard() {
                       <span>{walletData.wallet.totalWithdrawn.toLocaleString()} withdrawn</span>
                     </div>
                   </div>
+                  {walletData.wallet.ntzsBalance !== null && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">nTZS on-chain</span>
+                        <span className="text-amber-400 font-semibold">{walletData.wallet.ntzsBalance.toLocaleString()} TZS</span>
+                      </div>
+                      {walletData.wallet.ntzsWalletAddress && (
+                        <p className="text-xs text-muted-foreground/50 font-mono truncate mt-1">
+                          {walletData.wallet.ntzsWalletAddress}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <Button
                     onClick={() => { setShowWithdrawModal(true); setWithdrawError(""); setWithdrawSuccess(""); }}
                     disabled={walletData.wallet.balance < 1000}
