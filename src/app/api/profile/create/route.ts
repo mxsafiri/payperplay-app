@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { activateTrial } from "@/lib/subscription";
+import { getNtzsClient, NtzsApiError } from "@/lib/ntzs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -99,6 +100,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Provision nTZS wallet for all users (async, non-blocking)
+    provisionNtzsWallet(profile.id, session.user.email || `${handle}@payperplay.xyz`).catch(
+      (err) => console.error("nTZS wallet provisioning error:", err)
+    );
+
     return NextResponse.json({ profile }, { status: 201 });
   } catch (error) {
     console.error("Profile creation error:", error);
@@ -106,5 +112,40 @@ export async function POST(req: NextRequest) {
       { error: "Failed to create profile" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Provision an nTZS wallet for a PayPerPlay user.
+ * Maps profile.id → nTZS externalId so we can look up later.
+ */
+async function provisionNtzsWallet(profileId: string, email: string) {
+  try {
+    const ntzs = getNtzsClient();
+    const ntzsUser = await ntzs.users.create({
+      externalId: profileId,
+      email,
+    });
+
+    await db
+      .update(profiles)
+      .set({
+        ntzsUserId: ntzsUser.id,
+        ntzsWalletAddress: ntzsUser.walletAddress,
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, profileId));
+
+    console.log("nTZS wallet provisioned:", {
+      profileId,
+      ntzsUserId: ntzsUser.id,
+      walletAddress: ntzsUser.walletAddress,
+    });
+  } catch (err) {
+    if (err instanceof NtzsApiError) {
+      console.error("nTZS API error during wallet provisioning:", err.status, err.message);
+    } else {
+      throw err;
+    }
   }
 }

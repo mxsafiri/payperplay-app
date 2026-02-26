@@ -4,6 +4,8 @@ import { creatorWallets, walletTransactions } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getNtzsClient } from "@/lib/ntzs";
+import { ensureNtzsWallet } from "@/lib/ntzs-provision";
 
 export async function GET() {
   try {
@@ -41,6 +43,25 @@ export async function GET() {
       .orderBy(desc(walletTransactions.createdAt))
       .limit(20);
 
+    // Lazy-provision nTZS wallet for existing creators
+    if (!profile.ntzsUserId) {
+      await ensureNtzsWallet(profile.id).catch(() => {});
+    }
+
+    // Fetch nTZS on-chain balance if provisioned
+    let ntzsBalance = 0;
+    let ntzsWalletAddress = profile.ntzsWalletAddress || null;
+    if (profile.ntzsUserId) {
+      try {
+        const ntzs = getNtzsClient();
+        const bal = await ntzs.users.getBalance(profile.ntzsUserId);
+        ntzsBalance = bal.balanceTzs;
+        ntzsWalletAddress = bal.walletAddress;
+      } catch {
+        // Non-fatal — fall back to 0
+      }
+    }
+
     return NextResponse.json({
       wallet: {
         id: wallet.id,
@@ -48,6 +69,8 @@ export async function GET() {
         totalEarned: wallet.totalEarned,
         totalWithdrawn: wallet.totalWithdrawn,
         totalFees: wallet.totalFees,
+        ntzsBalance,
+        ntzsWalletAddress,
       },
       transactions: transactions.map((tx) => ({
         id: tx.id,

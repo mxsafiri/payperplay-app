@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { paymentIntents, entitlements, content, platformSubscriptions } from "@/db/schema";
+import { paymentIntents, entitlements, content, profiles } from "@/db/schema";
 import { paymentProvider } from "@/lib/payments";
 import { SnippePaymentProvider } from "@/lib/payments/providers/snippe-provider";
 import { creditCreatorWallet } from "@/lib/wallet";
 import { activateWeeklySubscription } from "@/lib/subscription";
+import { getNtzsClient } from "@/lib/ntzs";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (contentItem) {
+          // Credit internal ledger
           const result = await creditCreatorWallet({
             creatorId: contentItem.creatorId,
             amountTzs: paymentIntent.amountTzs,
@@ -109,6 +111,11 @@ export async function POST(req: NextRequest) {
           if (!result.success) {
             console.error("Failed to credit creator wallet:", result.error);
           }
+
+          // Also deposit creator's share into their nTZS on-chain wallet
+          mintToCreatorNtzsWallet(contentItem.creatorId, result.creatorEarning).catch(
+            (err) => console.error("nTZS mint to creator failed:", err)
+          );
         }
 
         console.log("Entitlement granted:", {
@@ -126,4 +133,36 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Deposit creator's earning share into their nTZS on-chain wallet.
+ * Uses the nTZS deposits API to mint tokens directly to the creator's wallet.
+ * Non-blocking — failures are logged but don't affect the payment flow.
+ */
+async function mintToCreatorNtzsWallet(creatorId: string, amountTzs: number) {
+  if (amountTzs <= 0) return;
+
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, creatorId),
+  });
+
+  if (!profile?.ntzsUserId) {
+    console.log("Creator has no nTZS wallet, skipping on-chain mint:", creatorId);
+    return;
+  }
+
+  const ntzs = getNtzsClient();
+  const deposit = await ntzs.deposits.create({
+    userId: profile.ntzsUserId,
+    amountTzs,
+    phoneNumber: "system",
+  });
+
+  console.log("nTZS deposit minted to creator:", {
+    creatorId,
+    ntzsUserId: profile.ntzsUserId,
+    amountTzs,
+    depositId: deposit.id,
+  });
 }

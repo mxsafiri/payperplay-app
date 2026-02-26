@@ -19,6 +19,8 @@ export const profiles = pgTable('profiles', {
   displayName: text('display_name'),
   bio: text('bio'),
   avatarUrl: text('avatar_url'),
+  ntzsUserId: text('ntzs_user_id'), // nTZS WaaS user ID for wallet
+  ntzsWalletAddress: text('ntzs_wallet_address'), // On-chain wallet address
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({

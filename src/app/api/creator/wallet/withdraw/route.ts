@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { creatorWallets, walletTransactions } from "@/db/schema";
+import { creatorWallets, walletTransactions, profiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { debitCreatorWallet } from "@/lib/wallet";
-import { sendPayout, calculatePayoutFee } from "@/lib/payouts/snippe-payout";
+import { getNtzsClient } from "@/lib/ntzs";
+import { ensureNtzsWallet } from "@/lib/ntzs-provision";
 import { eq, sql } from "drizzle-orm";
 
 const MIN_WITHDRAWAL_TZS = 5000;
@@ -59,7 +60,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Debit wallet first (optimistic — marks tx as pending)
+    // Lazy-provision nTZS wallet if needed
+    if (!profile.ntzsUserId) {
+      const ntzsUserId = await ensureNtzsWallet(profile.id);
+      if (!ntzsUserId) {
+        return NextResponse.json(
+          { error: "nTZS wallet could not be provisioned. Please try again later." },
+          { status: 400 }
+        );
+      }
+      profile.ntzsUserId = ntzsUserId;
+    }
+
+    // Debit internal wallet first (optimistic — marks tx as pending)
     const debitResult = await debitCreatorWallet({
       creatorId: profile.id,
       amountTzs: amount,
@@ -74,21 +87,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send payout via Snippe
-    const payoutResult = await sendPayout({
-      amount,
-      recipientPhone: phoneNumber,
-      recipientName: profile.displayName || profile.handle,
-      narration: `PayPerPlay earnings withdrawal`,
-      metadata: {
-        creator_id: profile.id,
-        wallet_transaction_id: debitResult.transactionId,
-      },
-    });
+    // Send withdrawal via nTZS (burns tokens + sends M-Pesa payout)
+    try {
+      const ntzs = getNtzsClient();
+      const withdrawal = await ntzs.withdrawals.create({
+        userId: profile.ntzsUserId,
+        amountTzs: amount,
+        phoneNumber,
+      });
 
-    if (!payoutResult.success) {
+      // Mark internal transaction as completed
+      if (debitResult.transactionId) {
+        await db
+          .update(walletTransactions)
+          .set({
+            status: "completed",
+            metadata: JSON.stringify({ phoneNumber, ntzsWithdrawalId: withdrawal.id }),
+          })
+          .where(eq(walletTransactions.id, debitResult.transactionId));
+      }
+
+      return NextResponse.json({
+        success: true,
+        transactionId: debitResult.transactionId,
+        ntzsWithdrawalId: withdrawal.id,
+        amount,
+        newBalance: debitResult.newBalance,
+      });
+    } catch (ntzsError) {
       // Refund: restore wallet balance and mark transaction as failed
-      console.error("Payout initiation failed after debit:", payoutResult.error);
+      console.error("nTZS withdrawal failed after debit:", ntzsError);
       try {
         await db
           .update(creatorWallets)
@@ -104,30 +132,20 @@ export async function POST(req: NextRequest) {
             .update(walletTransactions)
             .set({
               status: "failed",
-              description: `Withdrawal failed: ${payoutResult.error}`,
+              description: `Withdrawal failed: ${ntzsError instanceof Error ? ntzsError.message : "Unknown error"}`,
             })
             .where(eq(walletTransactions.id, debitResult.transactionId));
         }
-        console.log("Wallet refunded after failed payout initiation");
+        console.log("Wallet refunded after failed nTZS withdrawal");
       } catch (refundError) {
-        console.error("CRITICAL: Failed to refund wallet after payout failure:", refundError);
+        console.error("CRITICAL: Failed to refund wallet after nTZS withdrawal failure:", refundError);
       }
 
       return NextResponse.json(
-        { error: payoutResult.error || "Payout failed — please try again" },
+        { error: "Withdrawal failed — please try again" },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({
-      success: true,
-      transactionId: debitResult.transactionId,
-      payoutReference: payoutResult.reference,
-      amount,
-      fees: payoutResult.fees,
-      total: payoutResult.total,
-      newBalance: debitResult.newBalance,
-    });
   } catch (error) {
     console.error("Withdrawal error:", error);
     return NextResponse.json(
