@@ -117,14 +117,32 @@ export async function POST(req: NextRequest) {
 
     let transferResult;
     if (creatorNtzsUserId) {
-      transferResult = await ntzs.transfers.create({
-        fromUserId: ntzsUserId,
-        toUserId: creatorNtzsUserId,
-        amountTzs: creatorEarning,
-        metadata: { contentId, fanProfileId: profile.id, type: "content_purchase" },
-      });
+      try {
+        transferResult = await ntzs.transfers.create({
+          fromUserId: ntzsUserId,
+          toUserId: creatorNtzsUserId,
+          amountTzs: creatorEarning,
+        });
+      } catch (transferErr) {
+        const msg = transferErr instanceof NtzsApiError ? transferErr.message : String(transferErr);
+        console.error("nTZS transfer error:", msg);
+
+        if (msg.includes("insufficient funds") || msg.includes("gas") || msg.includes("INSUFFICIENT_FUNDS")) {
+          return NextResponse.json(
+            { error: "Payment system is temporarily unavailable. Our team has been notified — please try again in a few minutes." },
+            { status: 503 }
+          );
+        }
+        if (msg.includes("Insufficient balance")) {
+          return NextResponse.json(
+            { error: "Insufficient wallet balance", required: contentItem.priceTzs, balance: balanceTzs, topUpRequired: contentItem.priceTzs - balanceTzs },
+            { status: 402 }
+          );
+        }
+        return NextResponse.json({ error: `Payment failed: ${msg}` }, { status: 500 });
+      }
     } else {
-      // Creator not on nTZS yet — still do the transfer as a deposit record
+      // Creator not on nTZS yet — record locally
       transferResult = { id: `local_${Date.now()}`, status: "completed", amountTzs: creatorEarning };
     }
 
@@ -167,8 +185,11 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Payment initiation error:", error);
+    const message = error instanceof NtzsApiError
+      ? `Payment failed: ${error.message}`
+      : "Failed to initiate payment";
     return NextResponse.json(
-      { error: "Failed to initiate payment" },
+      { error: message },
       { status: 500 }
     );
   }
