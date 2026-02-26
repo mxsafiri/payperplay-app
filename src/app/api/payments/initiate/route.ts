@@ -133,6 +133,12 @@ export async function POST(req: NextRequest) {
             { status: 503 }
           );
         }
+        if (msg.includes("settlement on hold")) {
+          return NextResponse.json(
+            { error: "Your wallet is temporarily restricted. Please contact support@payperplay.xyz to resolve this." },
+            { status: 403 }
+          );
+        }
         if (msg.includes("Insufficient balance")) {
           return NextResponse.json(
             { error: "Insufficient wallet balance", required: contentItem.priceTzs, balance: balanceTzs, topUpRequired: contentItem.priceTzs - balanceTzs },
