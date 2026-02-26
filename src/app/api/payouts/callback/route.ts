@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { walletTransactions, creatorWallets } from "@/db/schema";
-import { SnippePaymentProvider } from "@/lib/payments/providers/snippe-provider";
 import { eq, sql } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
 
-    // Verify webhook signature
-    const signature = req.headers.get("x-webhook-signature") || "";
-    const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET || "";
-
-    if (webhookSecret && !SnippePaymentProvider.verifySignature(rawBody, signature, webhookSecret)) {
-      console.error("Invalid payout webhook signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
     const payload = JSON.parse(rawBody);
+    // nTZS withdrawal webhook events
     const eventType = payload.type as string;
     const data = payload.data as {
       reference: string;

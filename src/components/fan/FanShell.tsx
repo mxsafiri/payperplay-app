@@ -15,6 +15,7 @@ import {
   User,
   Crown,
   LayoutDashboard,
+  Wallet,
 } from "lucide-react";
 
 type Profile = {
@@ -24,6 +25,7 @@ type Profile = {
 const FAN_NAV_ITEMS = [
   { href: "/feed", label: "Discover", icon: LayoutGrid },
   { href: "/library", label: "My Library", icon: Library },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/subscribe", label: "Subscription", icon: Crown },
 ];

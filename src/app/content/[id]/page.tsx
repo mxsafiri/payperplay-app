@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { placeholderCreators } from "@/data/placeholder-creators";
 
@@ -39,9 +38,9 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   const [content, setContent] = useState<ContentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewEnded, setPreviewEnded] = useState(false);
@@ -57,7 +56,18 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       setContentId(p.id);
       fetchContent(p.id);
     });
-  }, [params]);
+    if (session) fetchWalletBalance();
+  }, [params, session]);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const res = await fetch("/api/wallet");
+      if (res.ok) {
+        const data = await res.json();
+        setWalletBalance(data.wallet?.balanceTzs ?? 0);
+      }
+    } catch { /* non-critical */ }
+  };
 
   const fetchFollowStatus = async (creatorId: string) => {
     try {
@@ -158,8 +168,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
     }
   }, []);
 
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayment = async () => {
     if (!session) {
       router.push("/login");
       return;
@@ -172,60 +181,31 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
       const response = await fetch("/api/payments/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contentId,
-          phoneNumber,
-        }),
+        body: JSON.stringify({ contentId }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setPaymentError(data.error || "Payment initiation failed");
+        if (response.status === 402) {
+          setPaymentError(
+            `Insufficient balance. You need ${data.required?.toLocaleString()} TZS but have ${data.balance?.toLocaleString()} TZS. Top up your wallet first.`
+          );
+        } else {
+          setPaymentError(data.error || "Payment failed");
+        }
         setPaymentLoading(false);
         return;
       }
 
-      // Show success message with instructions
+      // nTZS transfer is instant — content unlocked immediately
       setPaymentSuccess(true);
-      
-      // Poll for payment status
-      pollPaymentStatus(data.paymentIntentId);
-    } catch (error) {
+      setPaymentLoading(false);
+      fetchContent(contentId);
+    } catch {
       setPaymentError("An unexpected error occurred");
       setPaymentLoading(false);
     }
-  };
-
-  const pollPaymentStatus = async (paymentIntentId: string) => {
-    const maxAttempts = 60; // 60 attempts
-    let attempts = 0;
-
-    const interval = setInterval(async () => {
-      attempts++;
-
-      try {
-        const response = await fetch(`/api/payments/status/${paymentIntentId}`);
-        const data = await response.json();
-
-        if (data.status === "paid" && data.hasEntitlement) {
-          clearInterval(interval);
-          setPaymentLoading(false);
-          // Refresh content to show unlocked state
-          fetchContent(contentId);
-        } else if (data.status === "failed") {
-          clearInterval(interval);
-          setPaymentLoading(false);
-          setPaymentError("Payment failed. Please try again.");
-        } else if (attempts >= maxAttempts) {
-          clearInterval(interval);
-          setPaymentLoading(false);
-          setPaymentError("Payment is taking longer than expected. Please check your library.");
-        }
-      } catch (error) {
-        console.error("Status check error:", error);
-      }
-    }, 5000);
   };
 
   const getCreatorImage = (creatorId: string) => {
@@ -466,59 +446,51 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                       </Button>
                     </div>
                   ) : paymentSuccess ? (
-                    <div className="space-y-3">
-                      <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                        <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-                          ✓ Payment initiated successfully!
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Check your phone for the payment prompt
-                        </p>
-                      </div>
-                      {paymentLoading && (
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                          <p className="text-sm text-muted-foreground">
-                            Waiting for payment confirmation...
-                          </p>
-                        </div>
-                      )}
+                    <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+                      <div className="text-3xl mb-2">✓</div>
+                      <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                        Payment successful!
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Content unlocked from your wallet
+                      </p>
                     </div>
                   ) : (
-                    <form onSubmit={handlePayment} className="space-y-4">
+                    <div className="space-y-4">
                       {paymentError && (
                         <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
                           {paymentError}
+                          {paymentError.includes("Insufficient") && (
+                            <a href="/wallet" className="block mt-2 underline font-medium">
+                              Top up wallet →
+                            </a>
+                          )}
                         </div>
                       )}
 
-                      <div className="space-y-2">
-                        <label htmlFor="phone" className="text-sm font-medium">
-                          Mobile Money Number
-                        </label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="0712345678"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          required
-                          disabled={paymentLoading}
-                          pattern="0[67]\d{8}"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          M-Pesa, Tigo Pesa, or Airtel Money
-                        </p>
-                      </div>
+                      {/* Wallet balance preview */}
+                      {walletBalance !== null && (
+                        <div className="p-3 rounded-lg bg-muted text-sm flex justify-between">
+                          <span className="text-muted-foreground">Your wallet</span>
+                          <span className={walletBalance >= content.priceTzs ? "text-green-500 font-medium" : "text-red-400 font-medium"}>
+                            {walletBalance.toLocaleString()} TZS
+                          </span>
+                        </div>
+                      )}
 
                       <Button
-                        type="submit"
                         className="w-full"
                         disabled={paymentLoading}
+                        onClick={handlePayment}
                       >
-                        {paymentLoading ? "Processing..." : `Pay ${content.priceTzs} TZS`}
+                        {paymentLoading ? "Processing..." : `Pay ${content.priceTzs.toLocaleString()} TZS from Wallet`}
                       </Button>
-                    </form>
+
+                      <p className="text-xs text-center text-muted-foreground">
+                        Instant · No M-Pesa push ·{" "}
+                        <a href="/wallet" className="underline">Top up wallet</a>
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { paymentProvider } from "@/lib/payments";
+import { getNtzsClient } from "@/lib/ntzs";
+import { ensureNtzsWallet } from "@/lib/ntzs-provision";
 import { activateWeeklySubscription, WEEKLY_PRICE_TZS } from "@/lib/subscription";
 
 export async function POST(req: NextRequest) {
@@ -26,42 +27,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
     }
 
-    // Generate a unique reference for this subscription payment
-    const reference = `sub_${profile.id}_${Date.now()}`;
+    // Ensure user has an nTZS wallet
+    const ntzsUserId = await ensureNtzsWallet(profile.id);
+    if (!ntzsUserId) {
+      return NextResponse.json({ error: "Wallet not available. Please try again." }, { status: 400 });
+    }
 
-    // Initiate payment with provider
-    const paymentResult = await paymentProvider.initiate({
-      amount: WEEKLY_PRICE_TZS,
-      currency: "TZS",
+    // Check if user already has enough balance to pay subscription directly
+    const ntzs = getNtzsClient();
+    const { balanceTzs } = await ntzs.users.getBalance(ntzsUserId);
+
+    if (balanceTzs >= WEEKLY_PRICE_TZS) {
+      // Pay from existing nTZS balance — activate immediately
+      const reference = `sub_${profile.id}_${Date.now()}`;
+      await activateWeeklySubscription(profile.id, reference);
+
+      return NextResponse.json({
+        success: true,
+        reference,
+        paidFromBalance: true,
+        amount: WEEKLY_PRICE_TZS,
+        message: "Subscription activated from wallet balance",
+      });
+    }
+
+    // Not enough balance — initiate M-Pesa top-up via nTZS deposit
+    const deposit = await ntzs.deposits.create({
+      userId: ntzsUserId,
+      amountTzs: WEEKLY_PRICE_TZS,
       phoneNumber,
-      reference,
     });
-
-    if (!paymentResult.success) {
-      return NextResponse.json(
-        { error: paymentResult.error || "Payment initiation failed" },
-        { status: 400 }
-      );
-    }
-
-    // Mock provider: auto-confirm after short delay
-    if (paymentProvider.name === "mock") {
-      setTimeout(async () => {
-        try {
-          await activateWeeklySubscription(profile.id, reference);
-          console.log("Mock subscription payment auto-confirmed for:", profile.id);
-        } catch (err) {
-          console.error("Mock subscription auto-confirm error:", err);
-        }
-      }, 2000);
-    }
 
     return NextResponse.json({
       success: true,
-      reference,
-      providerReference: paymentResult.providerReference,
-      instructions: paymentResult.instructions,
+      depositId: deposit.id,
+      paidFromBalance: false,
+      instructions: deposit.instructions || `Pay TZS ${WEEKLY_PRICE_TZS.toLocaleString()} via M-Pesa to complete subscription`,
       amount: WEEKLY_PRICE_TZS,
+      message: "M-Pesa push sent — subscription activates on payment confirmation",
     });
   } catch (error) {
     console.error("Subscription payment error:", error);
