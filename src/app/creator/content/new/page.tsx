@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Youtube, Upload, ArrowLeft, FileVideo, X, ImageIcon } from "lucide-react";
+import { Upload, ArrowLeft, FileVideo, X, ImageIcon } from "lucide-react";
 
 const MAX_VIDEO_SIZE_MB = 500;
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -34,8 +34,7 @@ export default function CreateContentPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Music");
-  const [contentType, setContentType] = useState<"youtube_preview" | "upload">("youtube_preview");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const contentType = "upload" as const;
   const [priceType, setPriceType] = useState<"free" | "preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState(500);
   const [customPrice, setCustomPrice] = useState("");
@@ -45,6 +44,8 @@ export default function CreateContentPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<"" | "uploading" | "done" | "error">("");
+  const [videoDragging, setVideoDragging] = useState(false);
+  const [thumbDragging, setThumbDragging] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
@@ -186,13 +187,7 @@ export default function CreateContentPage() {
         return;
       }
 
-      if (contentType === "youtube_preview" && !youtubeUrl.trim()) {
-        setError("YouTube URL is required");
-        setLoading(false);
-        return;
-      }
-
-      if (contentType === "upload" && !videoFile) {
+      if (!videoFile) {
         setError("Please select a video file");
         setLoading(false);
         return;
@@ -216,7 +211,7 @@ export default function CreateContentPage() {
       let videoStorageKey: string | null = null;
       let thumbnailStorageKey: string | null = null;
 
-      if (contentType === "upload" && videoFile) {
+      if (videoFile) {
         setUploadStatus("uploading");
         setUploadProgress(0);
         try {
@@ -250,7 +245,7 @@ export default function CreateContentPage() {
           description,
           category,
           contentType,
-          youtubeUrl: contentType === "youtube_preview" ? youtubeUrl : null,
+          youtubeUrl: null,
           videoStorageKey,
           thumbnailStorageKey,
           priceTzs,
@@ -367,167 +362,101 @@ export default function CreateContentPage() {
               </div>
             </div>
 
-            {/* Content Type */}
+            {/* Upload */}
             <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-              <div className="relative p-6">
-                <h2 className="text-lg font-semibold tracking-tight mb-4">Content Type</h2>
-                <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setContentType("youtube_preview")}
-                    disabled={loading}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      contentType === "youtube_preview"
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Youtube className="w-8 h-8 text-red-500 mb-2" />
-                    <div className="font-semibold">YouTube Early Access</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Share YouTube videos before they go public
-                    </div>
-                  </button>
+              <div className="relative p-6 space-y-5">
+                <h2 className="text-lg font-semibold tracking-tight">Upload Video</h2>
 
-                  <button
-                    type="button"
-                    onClick={() => setContentType("upload")}
-                    disabled={loading}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      contentType === "upload"
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Upload className="w-8 h-8 text-blue-500 mb-2" />
-                    <div className="font-semibold">Upload Video</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      MP4, WebM, or MOV up to {MAX_VIDEO_SIZE_MB}MB
+                {/* Video drop zone */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Video File *</label>
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    onChange={handleVideoSelect}
+                    className="hidden"
+                  />
+                  {videoFile ? (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                      <FileVideo className="w-8 h-8 text-blue-400 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{videoFile.name}</p>
+                        <p className="text-xs text-muted-foreground">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+                      </div>
+                      <button type="button" onClick={() => { setVideoFile(null); setUploadStatus(""); }} className="p-1 rounded hover:bg-white/10">
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                  </button>
+                  ) : (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setVideoDragging(true); }}
+                      onDragLeave={() => setVideoDragging(false)}
+                      onDrop={(e) => { e.preventDefault(); setVideoDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleVideoSelect({ target: { files: e.dataTransfer.files } } as any); }}
+                      onClick={() => videoInputRef.current?.click()}
+                      className={`w-full p-10 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${
+                        videoDragging ? "border-amber-500 bg-amber-500/10" : "border-white/15 hover:border-white/30 hover:bg-white/5"
+                      }`}
+                    >
+                      <Upload className={`w-10 h-10 mx-auto mb-3 transition-colors ${videoDragging ? "text-amber-400" : "text-muted-foreground"}`} />
+                      <p className="text-sm font-medium">{videoDragging ? "Drop to upload" : "Drag & drop or click to select"}</p>
+                      <p className="text-xs text-muted-foreground mt-1">MP4, WebM, or MOV · Max {MAX_VIDEO_SIZE_MB}MB</p>
+                    </div>
+                  )}
+
+                  {uploadStatus === "uploading" && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {contentType === "youtube_preview" && (
-                  <div className="space-y-2">
-                    <label htmlFor="youtubeUrl" className="text-sm font-medium">
-                      YouTube URL *
-                    </label>
-                    <Input
-                      id="youtubeUrl"
-                      type="url"
-                      placeholder="https://youtube.com/watch?v=..."
-                      value={youtubeUrl}
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Paste the full YouTube video URL
-                    </p>
-                  </div>
-                )}
-
-                {contentType === "upload" && (
-                  <div className="space-y-4">
-                    {/* Video file picker */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Video File *</label>
-                      <input
-                        ref={videoInputRef}
-                        type="file"
-                        accept="video/mp4,video/webm,video/quicktime"
-                        onChange={handleVideoSelect}
-                        className="hidden"
-                      />
-                      {videoFile ? (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
-                          <FileVideo className="w-8 h-8 text-blue-400 shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{videoFile.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => { setVideoFile(null); setUploadStatus(""); }}
-                            className="p-1 rounded hover:bg-white/10"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => videoInputRef.current?.click()}
-                          disabled={loading}
-                          className="w-full p-8 rounded-lg border-2 border-dashed border-white/15 hover:border-white/30 transition-colors text-center"
-                        >
-                          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm font-medium">Click to select video</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            MP4, WebM, or MOV · Max {MAX_VIDEO_SIZE_MB}MB
-                          </p>
-                        </button>
-                      )}
-
-                      {uploadStatus === "uploading" && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Uploading...</span>
-                            <span>{uploadProgress}%</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
-                              style={{ width: `${uploadProgress}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
+                {/* Thumbnail drop zone */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Thumbnail{" "}
+                    <span className="text-muted-foreground font-normal">(optional — auto-generated if not set)</span>
+                  </label>
+                  <input
+                    ref={thumbInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleThumbnailSelect}
+                    className="hidden"
+                  />
+                  {thumbnailFile ? (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                      <ImageIcon className="w-6 h-6 text-green-400 shrink-0" />
+                      <p className="text-sm truncate flex-1">{thumbnailFile.name}</p>
+                      <button type="button" onClick={() => setThumbnailFile(null)} className="p-1 rounded hover:bg-white/10">
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-
-                    {/* Thumbnail picker (optional) */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Thumbnail (optional)</label>
-                      <input
-                        ref={thumbInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleThumbnailSelect}
-                        className="hidden"
-                      />
-                      {thumbnailFile ? (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
-                          <ImageIcon className="w-6 h-6 text-green-400 shrink-0" />
-                          <p className="text-sm truncate flex-1">{thumbnailFile.name}</p>
-                          <button
-                            type="button"
-                            onClick={() => setThumbnailFile(null)}
-                            className="p-1 rounded hover:bg-white/10"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => thumbInputRef.current?.click()}
-                          disabled={loading}
-                          className="w-full p-4 rounded-lg border-2 border-dashed border-white/10 hover:border-white/20 transition-colors text-center"
-                        >
-                          <ImageIcon className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            JPEG, PNG, or WebP · Max {MAX_THUMB_SIZE_MB}MB
-                          </p>
-                        </button>
-                      )}
+                  ) : (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setThumbDragging(true); }}
+                      onDragLeave={() => setThumbDragging(false)}
+                      onDrop={(e) => { e.preventDefault(); setThumbDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleThumbnailSelect({ target: { files: e.dataTransfer.files } } as any); }}
+                      onClick={() => thumbInputRef.current?.click()}
+                      className={`w-full p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${
+                        thumbDragging ? "border-green-500 bg-green-500/10" : "border-white/10 hover:border-white/20 hover:bg-white/5"
+                      }`}
+                    >
+                      <ImageIcon className={`w-7 h-7 mx-auto mb-2 transition-colors ${thumbDragging ? "text-green-400" : "text-muted-foreground"}`} />
+                      <p className="text-xs text-muted-foreground">{thumbDragging ? "Drop image here" : "Drag & drop or click · JPEG, PNG, WebP · Max 5MB"}</p>
                     </div>
-                  </div>
-                )}
+                  )}
                 </div>
               </div>
             </div>
