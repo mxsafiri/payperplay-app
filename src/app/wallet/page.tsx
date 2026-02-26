@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { FanShell } from "@/components/fan/FanShell";
-import { Wallet, ArrowDownCircle, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
+import { Wallet, ArrowDownCircle, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
 
 interface WalletData {
   provisioned: boolean;
@@ -19,6 +19,13 @@ export default function WalletPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [topUpLoading, setTopUpLoading] = useState(false);
   const [topUpResult, setTopUpResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const showToast = useCallback((result: { success: boolean; message: string }) => {
+    setTopUpResult(result);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 5000);
+  }, []);
 
   useEffect(() => {
     fetchWallet();
@@ -62,18 +69,18 @@ export default function WalletPage() {
       const data = await res.json();
 
       if (res.ok) {
-        setTopUpResult({
+        showToast({
           success: true,
-          message: data.instructions || `M-Pesa push sent to ${phoneNumber}. Your balance will update after payment.`,
+          message: data.instructions || `M-Pesa push sent to ${phoneNumber}. Check your phone!`,
         });
         setTopUpAmount("");
         setPhoneNumber("");
         setTimeout(fetchWallet, 5000);
       } else {
-        setTopUpResult({ success: false, message: data.error || "Top-up failed. Please try again." });
+        showToast({ success: false, message: data.error || "Top-up failed. Please try again." });
       }
     } catch {
-      setTopUpResult({ success: false, message: "Network error. Please try again." });
+      showToast({ success: false, message: "Network error. Please try again." });
     } finally {
       setTopUpLoading(false);
     }
@@ -163,29 +170,12 @@ export default function WalletPage() {
               />
             </div>
 
-            {topUpResult && (
-              <div
-                className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
-                  topUpResult.success
-                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                    : "bg-red-500/10 border border-red-500/20 text-red-400"
-                }`}
-              >
-                {topUpResult.success ? (
-                  <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                )}
-                <p>{topUpResult.message}</p>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={topUpLoading || !topUpAmount || !phoneNumber}
               className="w-full py-3 rounded-xl bg-amber-500 text-black font-semibold hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {topUpLoading ? "Sending M-Pesa push..." : "Top Up via M-Pesa"}
+              {topUpLoading ? "Sending M-Pesa push..." : "Top Up Wallet"}
             </button>
           </form>
         </div>
@@ -209,6 +199,36 @@ export default function WalletPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Animated toast notification */}
+      <div
+        className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] w-[90vw] max-w-sm transition-all duration-300 ease-out ${
+          toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
+        {topUpResult && (
+          <div
+            className={`flex items-start gap-3 rounded-2xl px-4 py-3.5 shadow-2xl border backdrop-blur-xl text-sm ${
+              topUpResult.success
+                ? "bg-green-950/90 border-green-500/30 text-green-300"
+                : "bg-red-950/90 border-red-500/30 text-red-300"
+            }`}
+          >
+            {topUpResult.success ? (
+              <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0 text-green-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0 text-red-400" />
+            )}
+            <p className="flex-1 leading-snug">{topUpResult.message}</p>
+            <button
+              onClick={() => setToastVisible(false)}
+              className="ml-1 opacity-60 hover:opacity-100 transition-opacity flex-shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </FanShell>
   );
