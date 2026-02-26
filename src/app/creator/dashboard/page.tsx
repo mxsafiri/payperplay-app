@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { Package, Rocket, Eye, Coins, Film, Plus, Pencil, Wallet, ArrowDownToLine, ArrowUpFromLine, Clock, X, Phone, Banknote, User, LayoutDashboard, ListVideo, Menu, ChevronRight } from "lucide-react";
+import { Package, Rocket, Eye, Coins, Film, Plus, Pencil, Wallet, ArrowDownToLine, ArrowUpFromLine, Clock, Phone, Banknote, User, LayoutDashboard, ListVideo, ChevronRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface CreatorStats {
@@ -78,7 +78,6 @@ export default function CreatorDashboard() {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawError, setWithdrawError] = useState("");
   const [withdrawSuccess, setWithdrawSuccess] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAllTx, setShowAllTx] = useState(false);
 
   useEffect(() => {
@@ -223,51 +222,58 @@ export default function CreatorDashboard() {
         </div>
       </aside>
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 flex flex-col border-r border-white/10 backdrop-blur-xl bg-background/95">
-            <div className="p-5 border-b border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                  <Film className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-bold text-lg">PayPerPlay</span>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <nav className="flex-1 p-3 space-y-1">
-              {NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      isActive
-                        ? "bg-amber-500/15 text-amber-400 border border-amber-500/20"
-                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                    }`}
-                  >
-                    <item.icon className="w-4.5 h-4.5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-            <div className="p-3 border-t border-white/10">
-              <Link href="/feed" onClick={() => setSidebarOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
-                <Eye className="w-4.5 h-4.5" />
-                View as Fan
-              </Link>
-            </div>
-          </aside>
+      {/* Bottom tab bar — mobile only */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 backdrop-blur-xl bg-background/90">
+        <div className="flex items-stretch h-16">
+          {/* Dashboard */}
+          <Link
+            href="/creator/dashboard"
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+              pathname === "/creator/dashboard" ? "text-amber-400" : "text-muted-foreground"
+            }`}
+          >
+            <LayoutDashboard className={`w-5 h-5 ${pathname === "/creator/dashboard" ? "scale-110" : ""} transition-transform`} />
+            Dashboard
+          </Link>
+          {/* Playlists */}
+          <Link
+            href="/creator/playlists"
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+              pathname.startsWith("/creator/playlists") ? "text-amber-400" : "text-muted-foreground"
+            }`}
+          >
+            <ListVideo className={`w-5 h-5 ${pathname.startsWith("/creator/playlists") ? "scale-110" : ""} transition-transform`} />
+            Playlists
+          </Link>
+          {/* Center Upload FAB */}
+          <div className="flex-1 flex items-center justify-center">
+            <Link
+              href="/creator/content/new"
+              className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30 -mt-4 active:scale-95 transition-transform"
+            >
+              <Plus className="w-6 h-6 text-white" />
+            </Link>
+          </div>
+          {/* Profile */}
+          <Link
+            href="/creator/profile"
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+              pathname === "/creator/profile" ? "text-amber-400" : "text-muted-foreground"
+            }`}
+          >
+            <User className={`w-5 h-5 ${pathname === "/creator/profile" ? "scale-110" : ""} transition-transform`} />
+            Profile
+          </Link>
+          {/* Fan view */}
+          <Link
+            href="/feed"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground transition-colors"
+          >
+            <Eye className="w-5 h-5" />
+            Fan View
+          </Link>
         </div>
-      )}
+      </nav>
 
       {/* Main content area — offset for sidebar on desktop */}
       <div className="lg:ml-60">
@@ -275,17 +281,9 @@ export default function CreatorDashboard() {
         <header className="sticky top-0 z-30 border-b border-white/10 backdrop-blur-xl bg-background/60">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-                  <p className="text-sm text-muted-foreground">Overview of your content and earnings</p>
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Overview of your content and earnings</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="lg:hidden"><ThemeSwitch /></div>
@@ -300,7 +298,7 @@ export default function CreatorDashboard() {
           </div>
         </header>
 
-        <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-28 lg:pb-8 space-y-8">
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
