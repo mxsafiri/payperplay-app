@@ -151,8 +151,13 @@ export default function FeedPage() {
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-500/20">
-                        <Film className="w-12 h-12 text-muted-foreground" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 group-hover:from-amber-950/60 group-hover:to-zinc-900 transition-all duration-300">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-2xl font-bold mb-2 shadow-lg shadow-amber-500/20">
+                          {creatorInitial}
+                        </div>
+                        <p className="text-white/80 text-xs font-medium px-4 text-center line-clamp-2 leading-snug">
+                          {item.title}
+                        </p>
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
