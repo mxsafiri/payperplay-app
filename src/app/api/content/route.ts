@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { content } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { resolveAvatarUrl } from "@/lib/avatar";
+import { getPresignedReadUrl } from "@/lib/storage/r2";
 
 export async function GET(req: NextRequest) {
   try {
@@ -51,15 +52,34 @@ export async function GET(req: NextRequest) {
       contentList = await query;
     }
 
-    // Resolve r2:// avatar URLs to fresh presigned URLs
+    // Resolve avatar + thumbnail URLs (R2 storageKey → presigned URL)
     const resolved = await Promise.all(
-      contentList.map(async (item: any) => ({
-        ...item,
-        creator: {
-          ...item.creator,
-          avatarUrl: await resolveAvatarUrl(item.creator?.avatarUrl),
-        },
-      }))
+      contentList.map(async (item: any) => {
+        const resolvedMedia = await Promise.all(
+          (item.media || []).map(async (m: any) => {
+            if (m.mediaType === "thumbnail" && m.storageKey && !m.url) {
+              try {
+                const url = await getPresignedReadUrl({
+                  key: m.storageKey,
+                  expiresInSeconds: 7 * 24 * 3600,
+                });
+                return { ...m, url };
+              } catch {
+                return m;
+              }
+            }
+            return m;
+          })
+        );
+        return {
+          ...item,
+          media: resolvedMedia,
+          creator: {
+            ...item.creator,
+            avatarUrl: await resolveAvatarUrl(item.creator?.avatarUrl),
+          },
+        };
+      })
     );
 
     return NextResponse.json({ content: resolved });

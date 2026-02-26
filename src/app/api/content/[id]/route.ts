@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { resolveAvatarUrl } from "@/lib/avatar";
+import { getPresignedReadUrl } from "@/lib/storage/r2";
 
 export async function GET(
   req: NextRequest,
@@ -30,6 +31,7 @@ export async function GET(
             id: true,
             mediaType: true,
             url: true,
+            storageKey: true,
           },
         },
       },
@@ -77,8 +79,24 @@ export async function GET(
       }
     }
 
+    // Resolve R2 thumbnail storageKeys → presigned URLs
+    const resolvedMedia = await Promise.all(
+      (contentItem.media || []).map(async (m: any) => {
+        if (m.mediaType === "thumbnail" && m.storageKey && !m.url) {
+          try {
+            const url = await getPresignedReadUrl({ key: m.storageKey, expiresInSeconds: 7 * 24 * 3600 });
+            return { ...m, url };
+          } catch {
+            return m;
+          }
+        }
+        return m;
+      })
+    );
+
     return NextResponse.json({
       ...contentItem,
+      media: resolvedMedia,
       creator: {
         ...contentItem.creator,
         avatarUrl: await resolveAvatarUrl(contentItem.creator?.avatarUrl),
