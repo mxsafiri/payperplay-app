@@ -124,11 +124,6 @@ export default function WalletPage() {
                 {(wallet?.balanceTzs ?? 0).toLocaleString()}
                 <span className="text-lg font-normal text-muted-foreground ml-2">TZS</span>
               </p>
-              {wallet?.walletAddress && (
-                <p className="text-xs text-muted-foreground/60 mt-2 font-mono truncate">
-                  {wallet.walletAddress}
-                </p>
-              )}
             </div>
           )}
         </div>
