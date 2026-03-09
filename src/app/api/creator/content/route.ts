@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { title, description, category, contentType, youtubeUrl, priceTzs, videoStorageKey, thumbnailStorageKey } = await req.json();
+    const { title, description, category, contentType, youtubeUrl, priceTzs, videoStorageKey, thumbnailStorageKey, status } = await req.json();
 
     // Validate
     if (!title || !category || !contentType || priceTzs === undefined || priceTzs === null) {
@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create content
+    const contentStatus = status === "draft" ? "draft" : "published";
     const [newContent] = await db
       .insert(content)
       .values({
@@ -123,8 +124,8 @@ export async function POST(req: NextRequest) {
         category,
         contentType,
         priceTzs,
-        status: "published", // Auto-publish for now
-        publishedAt: new Date(),
+        status: contentStatus,
+        publishedAt: contentStatus === "published" ? new Date() : null,
       })
       .returning();
 

@@ -46,6 +46,7 @@ export default function CreateContentPage() {
   const [uploadStatus, setUploadStatus] = useState<"" | "uploading" | "done" | "error">("");
   const [videoDragging, setVideoDragging] = useState(false);
   const [thumbDragging, setThumbDragging] = useState(false);
+  const [isDraft, setIsDraft] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
@@ -249,6 +250,7 @@ export default function CreateContentPage() {
           videoStorageKey,
           thumbnailStorageKey,
           priceTzs,
+          status: isDraft ? "draft" : "published",
         }),
       });
 
@@ -304,63 +306,6 @@ export default function CreateContentPage() {
                 {error}
               </div>
             )}
-
-            {/* Basic Info */}
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-              <div className="relative p-6">
-                <h2 className="text-lg font-semibold tracking-tight mb-4">Basic Information</h2>
-                <div className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="title" className="text-sm font-medium">
-                    Title *
-                  </label>
-                  <Input
-                    id="title"
-                    placeholder="Give your content a catchy title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    placeholder="Describe what fans will get..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    disabled={loading}
-                    className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="category" className="text-sm font-medium">
-                    Category *
-                  </label>
-                  <select
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                </div>
-              </div>
-            </div>
 
             {/* Upload */}
             <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
@@ -457,6 +402,63 @@ export default function CreateContentPage() {
                       <p className="text-xs text-muted-foreground">{thumbDragging ? "Drop image here" : "Drag & drop or click · JPEG, PNG, WebP · Max 5MB"}</p>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Info */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+              <div className="relative p-6">
+                <h2 className="text-lg font-semibold tracking-tight mb-4">Basic Information</h2>
+                <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="title" className="text-sm font-medium">
+                    Title *
+                  </label>
+                  <Input
+                    id="title"
+                    placeholder="Give your content a catchy title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="description" className="text-sm font-medium">
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    placeholder="Describe what fans will get..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    disabled={loading}
+                    className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="category" className="text-sm font-medium">
+                    Category *
+                  </label>
+                  <select
+                    id="category"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 </div>
               </div>
             </div>
@@ -586,18 +588,27 @@ export default function CreateContentPage() {
               </Button>
               <div className="flex items-center gap-3">
                 <Button
-                  type="submit"
+                  type="button"
                   variant="outline"
                   disabled={loading}
                   onClick={(e) => {
                     e.preventDefault();
-                    // TODO: Save as draft
+                    setIsDraft(true);
+                    setTimeout(() => {
+                      const form = e.currentTarget.closest("form");
+                      if (form) form.requestSubmit();
+                    }, 0);
                   }}
                 >
-                  Save as Draft
+                  {loading && isDraft ? "Saving Draft..." : "Save as Draft"}
                 </Button>
-                <Button type="submit" disabled={loading} className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]">
-                  {loading ? "Creating..." : "Publish Content"}
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  onClick={() => setIsDraft(false)}
+                  className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]"
+                >
+                  {loading && !isDraft ? "Publishing..." : "Publish Content"}
                 </Button>
               </div>
             </div>

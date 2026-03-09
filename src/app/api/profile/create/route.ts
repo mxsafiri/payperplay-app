@@ -44,6 +44,28 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUserProfile) {
+      // If role mismatch, update it
+      if (existingUserProfile.role !== role) {
+        console.log(`Role mismatch for user ${session.user.id}: existing=${existingUserProfile.role}, requested=${role}. Updating...`);
+        const [updated] = await db
+          .update(profiles)
+          .set({ role, updatedAt: new Date() })
+          .where(eq(profiles.id, existingUserProfile.id))
+          .returning();
+        
+        // If upgrading to creator, ensure creator profile + wallet exist
+        if (role === "creator") {
+          const hasCreatorProfile = await db.query.creatorProfiles.findFirst({
+            where: (cp, { eq }) => eq(cp.profileId, existingUserProfile.id),
+          });
+          if (!hasCreatorProfile) {
+            await db.insert(creatorProfiles).values({ profileId: existingUserProfile.id });
+            await db.insert(creatorWallets).values({ creatorId: existingUserProfile.id });
+          }
+        }
+        
+        return NextResponse.json({ profile: updated, roleUpdated: true }, { status: 200 });
+      }
       return NextResponse.json({ profile: existingUserProfile }, { status: 200 });
     }
 
@@ -73,6 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create profile
+    console.log(`Creating new profile for user ${session.user.id} with role=${role}, handle=${handle}`);
     const [profile] = await db
       .insert(profiles)
       .values({
@@ -82,6 +105,7 @@ export async function POST(req: NextRequest) {
         displayName: displayName || session.user.name,
       })
       .returning();
+    console.log(`Profile created: id=${profile.id}, role=${profile.role}`);
 
     // If creator, create creator profile + wallet
     if (role === "creator") {
