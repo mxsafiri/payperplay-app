@@ -65,6 +65,27 @@ export async function getPresignedReadUrl(params: {
 }
 
 /**
+ * Upload a file directly to R2 from the server (not presigned).
+ * Used for server-side operations like thumbnail generation.
+ */
+export async function uploadToR2(params: {
+  key: string;
+  body: Buffer | Uint8Array | string;
+  contentType: string;
+}): Promise<void> {
+  const client = getR2Client();
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: params.key,
+      Body: params.body,
+      ContentType: params.contentType,
+    })
+  );
+}
+
+/**
  * Delete a file from R2.
  */
 export async function deleteFile(key: string): Promise<void> {
