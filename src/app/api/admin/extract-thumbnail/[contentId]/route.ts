@@ -5,10 +5,10 @@ import { extractThumbnailFromR2Video } from "@/lib/server-thumbnail-extractor";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { contentId: string } }
+  { params }: { params: Promise<{ contentId: string }> }
 ) {
   try {
-    const { contentId } = params;
+    const { contentId } = await params;
 
     // Get content with media
     const contentItem = await db.query.content.findFirst({
