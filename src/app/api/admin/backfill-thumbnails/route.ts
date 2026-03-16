@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { content, contentMedia } from "@/db/schema";
+import { extractThumbnailFromR2Video } from "@/lib/server-thumbnail-extractor";
 
 export async function POST() {
   try {
@@ -12,7 +13,8 @@ export async function POST() {
     });
 
     let backfilledYoutube = 0;
-    let videosWithoutThumbnails = 0;
+    let backfilledUpload = 0;
+    let failedUpload = 0;
     const results: string[] = [];
 
     for (const item of allContent) {
@@ -42,19 +44,45 @@ export async function POST() {
         }
       }
       
-      // Handle uploaded videos - these will show creator card fallback in feed
+      // Handle uploaded videos - EXTRACT REAL FRAMES
       if (item.contentType === "upload") {
-        videosWithoutThumbnails++;
-        results.push(`⚠ Upload (no thumbnail): ${item.title} - will show creator card in feed`);
+        const videoMedia = item.media?.find((m: any) => m.mediaType === "video");
+        if (videoMedia?.storageKey) {
+          try {
+            console.log(`Processing: ${item.title}`);
+            
+            // Extract thumbnail using FFmpeg WASM
+            const thumbnailKey = await extractThumbnailFromR2Video(videoMedia.storageKey);
+            
+            // Save to database
+            await db.insert(contentMedia).values({
+              contentId: item.id,
+              mediaType: "thumbnail",
+              storageKey: thumbnailKey,
+            });
+            
+            backfilledUpload++;
+            results.push(`✓ Upload: ${item.title} - frame extracted`);
+          } catch (err) {
+            failedUpload++;
+            const errMsg = err instanceof Error ? err.message : String(err);
+            results.push(`✗ Upload FAILED: ${item.title} - ${errMsg}`);
+            console.error(`Failed to extract thumbnail for ${item.title}:`, err);
+          }
+        }
       }
     }
 
     return NextResponse.json({ 
-      message: `Backfilled ${backfilledYoutube} YouTube thumbnails. ${videosWithoutThumbnails} old uploads will show creator card fallback. NEW uploads are now protected by mandatory thumbnail extraction.`,
-      results 
+      message: `Backfilled ${backfilledYoutube} YouTube thumbnails, ${backfilledUpload} upload thumbnails extracted. ${failedUpload} failed.`,
+      results,
+      success: true
     });
   } catch (error) {
     console.error("Backfill error:", error);
-    return NextResponse.json({ error: "Backfill failed" }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : "Backfill failed",
+      success: false 
+    }, { status: 500 });
   }
 }
