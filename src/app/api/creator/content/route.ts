@@ -113,6 +113,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (contentType === "upload" && !thumbnailStorageKey) {
+      return NextResponse.json(
+        { error: "Thumbnail is required for video uploads. Please upload a custom thumbnail or ensure auto-generation succeeds." },
+        { status: 400 }
+      );
+    }
+
     // Create content
     const contentStatus = status === "draft" ? "draft" : "published";
     const [newContent] = await db
@@ -152,19 +159,11 @@ export async function POST(req: NextRequest) {
 
       await db.insert(contentMedia).values(mediaEntries);
     } else if (contentType === "upload" && videoStorageKey) {
-      const mediaEntries: { contentId: string; mediaType: string; storageKey: string; url?: string }[] = [
+      // Both video and thumbnail are guaranteed to exist (validated above)
+      await db.insert(contentMedia).values([
         { contentId: newContent.id, mediaType: "video", storageKey: videoStorageKey },
-      ];
-
-      if (thumbnailStorageKey) {
-        mediaEntries.push({
-          contentId: newContent.id,
-          mediaType: "thumbnail",
-          storageKey: thumbnailStorageKey,
-        });
-      }
-
-      await db.insert(contentMedia).values(mediaEntries);
+        { contentId: newContent.id, mediaType: "thumbnail", storageKey: thumbnailStorageKey },
+      ]);
     }
 
     return NextResponse.json({ content: newContent }, { status: 201 });

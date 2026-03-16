@@ -56,52 +56,82 @@ export default function CreateContentPage() {
       video.preload = "metadata";
       video.muted = true;
       video.playsInline = true;
+      video.crossOrigin = "anonymous";
 
       const url = URL.createObjectURL(file);
       video.src = url;
 
-      video.onloadeddata = () => {
-        // Seek to 1 second or 10% of duration, whichever is smaller
-        video.currentTime = Math.min(1, video.duration * 0.1);
-      };
+      let attempts = 0;
+      const maxAttempts = 3;
+      const seekTimes = [1, 0.5, 2]; // Try 1s, 0.5s, 2s
 
-      video.onseeked = () => {
+      const captureFrame = () => {
         try {
+          if (video.videoWidth === 0 || video.videoHeight === 0) {
+            console.error("Video dimensions are 0");
+            if (attempts < maxAttempts - 1) {
+              attempts++;
+              video.currentTime = seekTimes[attempts];
+              return;
+            }
+            URL.revokeObjectURL(url);
+            resolve(null);
+            return;
+          }
+
           const canvas = document.createElement("canvas");
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const ctx = canvas.getContext("2d");
-          if (!ctx) { resolve(null); return; }
+          if (!ctx) {
+            console.error("Failed to get canvas context");
+            URL.revokeObjectURL(url);
+            resolve(null);
+            return;
+          }
+
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           canvas.toBlob(
             (blob) => {
               URL.revokeObjectURL(url);
               if (blob) {
                 const thumbFile = new File([blob], "auto-thumbnail.jpg", { type: "image/jpeg" });
+                console.log(`Thumbnail extracted: ${thumbFile.size} bytes`);
                 resolve(thumbFile);
               } else {
+                console.error("Canvas toBlob returned null");
                 resolve(null);
               }
             },
             "image/jpeg",
-            0.85
+            0.9
           );
-        } catch {
+        } catch (err) {
+          console.error("Thumbnail extraction error:", err);
           URL.revokeObjectURL(url);
           resolve(null);
         }
       };
 
-      video.onerror = () => {
+      video.onloadedmetadata = () => {
+        console.log(`Video loaded: ${video.duration}s, ${video.videoWidth}x${video.videoHeight}`);
+        video.currentTime = Math.min(seekTimes[0], video.duration * 0.1);
+      };
+
+      video.onseeked = captureFrame;
+
+      video.onerror = (e) => {
+        console.error("Video load error:", e);
         URL.revokeObjectURL(url);
         resolve(null);
       };
 
-      // Timeout fallback
+      // Increased timeout to 20s for large videos
       setTimeout(() => {
+        console.error("Thumbnail extraction timeout");
         URL.revokeObjectURL(url);
         resolve(null);
-      }, 10000);
+      }, 20000);
     });
   };
 
@@ -221,12 +251,14 @@ export default function CreateContentPage() {
           // Upload creator's thumbnail or auto-generate one from the video
           let thumbToUpload = thumbnailFile;
           if (!thumbToUpload) {
+            setUploadProgress(50);
             const autoThumb = await extractVideoThumbnail(videoFile);
-            if (autoThumb) thumbToUpload = autoThumb;
+            if (!autoThumb) {
+              throw new Error("Failed to generate thumbnail from video. Please upload a custom thumbnail.");
+            }
+            thumbToUpload = autoThumb;
           }
-          if (thumbToUpload) {
-            thumbnailStorageKey = await uploadFileToR2(thumbToUpload, "thumbnail");
-          }
+          thumbnailStorageKey = await uploadFileToR2(thumbToUpload, "thumbnail");
 
           setUploadStatus("done");
         } catch (err: unknown) {
