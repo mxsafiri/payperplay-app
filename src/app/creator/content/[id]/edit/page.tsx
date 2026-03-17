@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, Heart, MessageCircle, ArrowLeft, Film, Plus, Save, Trash2, Send } from "lucide-react";
+import { useToast, Toaster } from "@/components/ui/toast";
 
 interface MediaItem {
   id: string;
@@ -50,6 +51,7 @@ const CATEGORIES = ["Music", "Comedy", "Education", "Entertainment", "News", "Sp
 export default function ContentEditPage() {
   const router = useRouter();
   const params = useParams();
+  const { toasts, toast, dismiss } = useToast();
   const contentId = params.id as string;
   const [content, setContent] = useState<ContentItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,14 +144,18 @@ export default function ContentEditPage() {
 
       if (res.ok) {
         setSaveSuccess(true);
+        toast("Changes saved successfully!", "success");
         fetchContent();
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         const data = await res.json();
-        setSaveError(data.error || "Failed to save");
+        const msg = data.error || "Failed to save";
+        setSaveError(msg);
+        toast(msg, "error");
       }
     } catch (error) {
       setSaveError("Failed to save changes");
+      toast("Failed to save changes", "error");
     } finally {
       setSaving(false);
     }
@@ -164,9 +170,15 @@ export default function ContentEditPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) fetchContent();
+      if (res.ok) {
+        toast(newStatus === "published" ? "Content published!" : "Content unpublished", "success");
+        fetchContent();
+      } else {
+        toast("Failed to update status", "error");
+      }
     } catch (error) {
       console.error("Failed to toggle publish:", error);
+      toast("Failed to update status", "error");
     }
   };
 
@@ -176,10 +188,14 @@ export default function ContentEditPage() {
     try {
       const res = await fetch(`/api/creator/content/${contentId}`, { method: "DELETE" });
       if (res.ok) {
-        router.push("/creator/dashboard");
+        toast("Content deleted", "success");
+        setTimeout(() => router.push("/creator/dashboard"), 1000);
+      } else {
+        toast("Failed to delete content", "error");
       }
     } catch (error) {
       console.error("Failed to delete:", error);
+      toast("Failed to delete content", "error");
     } finally {
       setDeleting(false);
     }
@@ -239,6 +255,7 @@ export default function ContentEditPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      <Toaster toasts={toasts} dismiss={dismiss} />
       {/* Subtle grid background */}
       <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(128,128,128,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.05) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
       <div className="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />

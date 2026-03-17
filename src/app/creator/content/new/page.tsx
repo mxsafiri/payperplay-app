@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, ArrowLeft, FileVideo, X, ImageIcon } from "lucide-react";
+import { useToast, Toaster } from "@/components/ui/toast";
 
 const MAX_VIDEO_SIZE_MB = 500;
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -27,6 +28,7 @@ const PRESET_PRICES = [500, 1000, 2000];
 
 export default function CreateContentPage() {
   const router = useRouter();
+  const { toasts, toast, dismiss } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -263,7 +265,9 @@ export default function CreateContentPage() {
           setUploadStatus("done");
         } catch (err: unknown) {
           setUploadStatus("error");
-          setError(err instanceof Error ? err.message : "Upload failed");
+          const msg = err instanceof Error ? err.message : "Upload failed";
+          setError(msg);
+          toast(msg, "error");
           setLoading(false);
           return;
         }
@@ -294,15 +298,18 @@ export default function CreateContentPage() {
       }
 
       const data = await response.json();
-      router.push(`/creator/content/${data.content.id}/edit`);
+      toast(isDraft ? "Draft saved successfully!" : "Content published!", "success");
+      setTimeout(() => router.push(`/creator/content/${data.content.id}/edit`), 1200);
     } catch (err) {
       setError("An unexpected error occurred");
+      toast("An unexpected error occurred", "error");
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      <Toaster toasts={toasts} dismiss={dismiss} />
       {/* Subtle grid background */}
       <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(128,128,128,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.05) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
       <div className="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
