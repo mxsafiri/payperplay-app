@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { walletTransactions, creatorWallets } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { verifyNtzsWebhook } from "@/lib/webhook-verify";
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
-
-    // ── Signature verification ────────────────────────────────────────────────
-    const signature = req.headers.get("x-ntzs-signature");
-    if (!verifyNtzsWebhook(rawBody, signature)) {
-      console.warn("[payouts/callback] Rejected — invalid webhook signature");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const payload = JSON.parse(rawBody);
     const eventType = payload.type as string;
     const data = payload.data as {

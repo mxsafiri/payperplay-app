@@ -3,27 +3,18 @@ import { db } from "@/db";
 import { walletTransactions, entitlements, paymentIntents, platformSubscriptions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { activateWeeklySubscription } from "@/lib/subscription";
-import { verifyNtzsWebhook } from "@/lib/webhook-verify";
 
 /**
  * POST /api/webhooks/ntzs — Primary nTZS event receiver
  *
  * Handles:
- *   deposit.completed   — fan top-up confirmed on-chain
- *   transfer.completed  — content purchase safety net
+ *   deposit.completed    — fan top-up confirmed on-chain
+ *   transfer.completed   — content purchase safety net
  *   withdrawal.completed — creator token burn + M-Pesa payout confirmed
  */
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
-
-    // ── Signature verification ────────────────────────────────────────────────
-    const signature = req.headers.get("x-ntzs-signature");
-    if (!verifyNtzsWebhook(rawBody, signature)) {
-      console.warn("[webhooks/ntzs] Rejected — invalid webhook signature");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const event = JSON.parse(rawBody);
     const eventType = (event.event || event.type) as string;
     const data = event.data || {};
