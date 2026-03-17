@@ -175,12 +175,25 @@ export async function POST(req: NextRequest) {
     });
 
     // Credit creator internal ledger
-    await creditCreatorWallet({
+    const creditResult = await creditCreatorWallet({
       creatorId: contentItem.creatorId,
       amountTzs: contentItem.priceTzs,
       paymentIntentId: paymentIntent.id,
       contentTitle: contentItem.title,
-    }).catch((err) => console.error("Internal ledger credit error:", err));
+    });
+    if (!creditResult.success) {
+      // nTZS transfer already confirmed and entitlement granted — payment is valid.
+      // Log CRITICAL so this can be manually reconciled against the nTZS transfer.
+      console.error("[CRITICAL] Creator wallet ledger credit failed after confirmed nTZS transfer", {
+        creatorId: contentItem.creatorId,
+        fanProfileId: profile.id,
+        contentId,
+        amountTzs: contentItem.priceTzs,
+        paymentIntentId: paymentIntent.id,
+        transferId: transferResult.id,
+        error: creditResult.error,
+      });
+    }
 
     return NextResponse.json({
       success: true,

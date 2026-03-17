@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { paymentIntents, entitlements, content, profiles } from "@/db/schema";
-import { creditCreatorWallet } from "@/lib/wallet";
+import { entitlements, paymentIntents, platformSubscriptions } from "@/db/schema";
 import { activateWeeklySubscription } from "@/lib/subscription";
-import { getNtzsClient } from "@/lib/ntzs";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { verifyNtzsWebhook } from "@/lib/webhook-verify";
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
-    const payload = JSON.parse(rawBody);
 
+    // ── Signature verification ────────────────────────────────────────────────
+    const signature = req.headers.get("x-ntzs-signature");
+    if (!verifyNtzsWebhook(rawBody, signature)) {
+      console.warn("[payments/callback] Rejected — invalid webhook signature");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const payload = JSON.parse(rawBody);
     const eventType = payload.type as string;
     const data = payload.data as {
       id: string;
@@ -20,21 +26,33 @@ export async function POST(req: NextRequest) {
       metadata?: { reference?: string; contentId?: string; fanProfileId?: string; type?: string };
     };
 
-    console.log("nTZS payment webhook received:", eventType);
+    console.log("[payments/callback] Event received:", eventType);
 
-    // deposit.completed — fan topped up their wallet
+    // ── deposit.completed — fan topped up, may trigger subscription ──────────
     if (eventType === "deposit.completed" && data.metadata?.reference?.startsWith("sub_")) {
       const parts = data.metadata.reference.split("_");
       const profileId = parts[1];
       if (profileId) {
-        await activateWeeklySubscription(profileId, data.metadata.reference);
-        console.log("Subscription activated via nTZS deposit for profile:", profileId);
+        // Idempotency: only activate if not already tied to this reference
+        const existing = await db.query.platformSubscriptions.findFirst({
+          where: and(
+            eq(platformSubscriptions.profileId, profileId),
+            eq(platformSubscriptions.paymentIntentId, data.metadata.reference)
+          ),
+        });
+        if (!existing) {
+          await activateWeeklySubscription(profileId, data.metadata.reference);
+          console.log("[payments/callback] Subscription activated for profile:", profileId);
+        } else {
+          console.log("[payments/callback] Duplicate deposit event, subscription already active:", profileId);
+        }
       }
       return NextResponse.json({ success: true });
     }
 
-    // transfer.completed — content purchase (already handled synchronously in /initiate)
-    // This is a safety net for any async transfers
+    // ── transfer.completed — safety net for content purchase ─────────────────
+    // Primary flow grants entitlement synchronously in /api/payments/initiate.
+    // This catches any edge cases where that failed.
     if (eventType === "transfer.completed" && data.metadata?.type === "content_purchase") {
       const { contentId, fanProfileId } = data.metadata;
       if (contentId && fanProfileId) {
@@ -53,7 +71,7 @@ export async function POST(req: NextRequest) {
               contentId,
               paymentIntentId: intent.id,
             });
-            console.log("Entitlement granted via transfer webhook:", { fanProfileId, contentId });
+            console.log("[payments/callback] Entitlement granted via transfer webhook:", { fanProfileId, contentId });
           }
         }
       }
@@ -61,42 +79,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Payment callback error:", error);
-    return NextResponse.json(
-      { error: "Failed to process callback" },
-      { status: 500 }
-    );
+    console.error("[payments/callback] Error:", error);
+    return NextResponse.json({ error: "Failed to process callback" }, { status: 500 });
   }
-}
-
-/**
- * Deposit creator's earning share into their nTZS on-chain wallet.
- * Uses the nTZS deposits API to mint tokens directly to the creator's wallet.
- * Non-blocking — failures are logged but don't affect the payment flow.
- */
-async function mintToCreatorNtzsWallet(creatorId: string, amountTzs: number) {
-  if (amountTzs <= 0) return;
-
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, creatorId),
-  });
-
-  if (!profile?.ntzsUserId) {
-    console.log("Creator has no nTZS wallet, skipping on-chain mint:", creatorId);
-    return;
-  }
-
-  const ntzs = getNtzsClient();
-  const deposit = await ntzs.deposits.create({
-    userId: profile.ntzsUserId,
-    amountTzs,
-    phoneNumber: "system",
-  });
-
-  console.log("nTZS deposit minted to creator:", {
-    creatorId,
-    ntzsUserId: profile.ntzsUserId,
-    amountTzs,
-    depositId: deposit.id,
-  });
 }

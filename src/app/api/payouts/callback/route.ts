@@ -2,13 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { walletTransactions, creatorWallets } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { verifyNtzsWebhook } from "@/lib/webhook-verify";
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
 
+    // ── Signature verification ────────────────────────────────────────────────
+    const signature = req.headers.get("x-ntzs-signature");
+    if (!verifyNtzsWebhook(rawBody, signature)) {
+      console.warn("[payouts/callback] Rejected — invalid webhook signature");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const payload = JSON.parse(rawBody);
-    // nTZS withdrawal webhook events
     const eventType = payload.type as string;
     const data = payload.data as {
       reference: string;
@@ -17,11 +24,11 @@ export async function POST(req: NextRequest) {
       metadata?: { wallet_transaction_id?: string; creator_id?: string };
     };
 
-    console.log("Payout webhook received:", { eventType, reference: data.reference, status: data.status });
+    console.log("[payouts/callback] Event received:", { eventType, reference: data.reference, status: data.status });
 
     const walletTxId = data.metadata?.wallet_transaction_id;
     if (!walletTxId) {
-      console.error("No wallet_transaction_id in payout metadata");
+      console.error("[payouts/callback] No wallet_transaction_id in payout metadata");
       return NextResponse.json({ success: true });
     }
 
@@ -31,7 +38,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!tx || tx.status !== "pending") {
-      console.log("Payout webhook skipped (already processed or not found):", walletTxId);
+      console.log("[payouts/callback] Skipped — already processed or not found:", walletTxId);
       return NextResponse.json({ success: true });
     }
 
@@ -41,7 +48,7 @@ export async function POST(req: NextRequest) {
         .set({ status: "completed" })
         .where(eq(walletTransactions.id, walletTxId));
 
-      console.log("Payout completed, wallet tx updated:", walletTxId);
+      console.log("[payouts/callback] Payout completed, wallet tx updated:", walletTxId);
     } else if (eventType === "payout.failed") {
       await db
         .update(walletTransactions)
@@ -63,7 +70,6 @@ export async function POST(req: NextRequest) {
         })
         .where(eq(creatorWallets.id, tx.walletId));
 
-      // Get updated wallet balance for ledger entry
       const wallet = await db.query.creatorWallets.findFirst({
         where: eq(creatorWallets.id, tx.walletId),
       });
@@ -79,12 +85,12 @@ export async function POST(req: NextRequest) {
         referenceId: walletTxId,
       });
 
-      console.log("Payout failed, balance refunded:", { walletTxId, refundAmount });
+      console.log("[payouts/callback] Payout failed, balance refunded:", { walletTxId, refundAmount });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Payout callback error:", error);
+    console.error("[payouts/callback] Error:", error);
     return NextResponse.json({ error: "Failed to process callback" }, { status: 500 });
   }
 }
