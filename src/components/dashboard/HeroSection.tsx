@@ -27,21 +27,21 @@ export function HeroSection() {
       <Container className="relative flex flex-col justify-center gap-10 py-16 lg:min-h-hero lg:py-24 lg:flex-row lg:items-center">
         <div className="max-w-2xl lg:flex-1">
           <div className="flex flex-wrap gap-2">
-            <Pill>Creator-first</Pill>
-            <Pill>Pay-per-play</Pill>
-            <Pill>Premium discovery</Pill>
+            <Pill>Creator-First</Pill>
+            <Pill>Lipa-per-Play</Pill>
+            <Pill>Premium Vibes</Pill>
           </div>
 
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-4xl lg:text-6xl">
             <Typewriter
-              texts={["Create, post and get-paid!", "Discover new content everyday!"]}
-              highlights={["get-paid!", "everyday!"]}
+              texts={["Create, post and make money!", "Discover content fresh kila siku!"]}
+              highlights={["make money!", "kila siku!"]}
               speed={70}
             />
           </h1>
 
           <p className="mt-4 max-w-xl text-base text-neutral-700 dark:text-neutral-300 sm:text-lg">
-            Discover creators, pay per play, and turn every moment into a premium experience.
+            The number one content platform in Africa — we support creators and their work.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -49,7 +49,7 @@ export function HeroSection() {
               href="#get-started"
               className="inline-flex h-11 items-center justify-center rounded-full bg-primary-500 px-6 text-sm font-semibold text-white shadow-sm shadow-primary-500/20 hover:bg-primary-400 dark:bg-primary-500 dark:hover:bg-primary-400"
             >
-              Play Content
+              Play Sasa
             </a>
           </div>
         </div>
