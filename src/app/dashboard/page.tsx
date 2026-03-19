@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { count, eq } from "drizzle-orm";
+import { count, eq, desc, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { profiles } from "@/db/schema";
+import { profiles, creatorWallets } from "@/db/schema";
+import { resolveAvatarUrl } from "@/lib/avatar";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
 import { HeroSection } from "@/components/dashboard/HeroSection";
 import { StatsCollage } from "@/components/dashboard/StatsCollage";
+import { LeaderboardSection } from "@/components/dashboard/LeaderboardSection";
 import { ContentDiscoverySection } from "@/components/dashboard/ContentDiscoverySection";
 import { EngagementSection } from "@/components/dashboard/EngagementSection";
 import { MonetizationSection } from "@/components/dashboard/MonetizationSection";
@@ -31,10 +33,26 @@ function formatCount(n: number): string {
 }
 
 export default async function DashboardPage() {
-  const [[{ total: totalUsers }], [{ total: totalCreators }]] = await Promise.all([
+  const [[{ total: totalUsers }], [{ total: totalCreators }], topEarners] = await Promise.all([
     db.select({ total: count() }).from(profiles),
     db.select({ total: count() }).from(profiles).where(eq(profiles.role, "creator")),
+    db
+      .select({
+        id: profiles.id,
+        handle: profiles.handle,
+        displayName: profiles.displayName,
+        avatarUrl: profiles.avatarUrl,
+        score: creatorWallets.totalEarned,
+      })
+      .from(creatorWallets)
+      .innerJoin(profiles, eq(profiles.id, creatorWallets.creatorId))
+      .orderBy(desc(creatorWallets.totalEarned))
+      .limit(3),
   ]);
+
+  const resolvedEarners = await Promise.all(
+    topEarners.map(async (c) => ({ ...c, avatarUrl: await resolveAvatarUrl(c.avatarUrl) }))
+  );
 
   const liveStats = [
     { metric: formatCount(totalCreators), label: "Creators", icon: "🔥" },
@@ -47,6 +65,8 @@ export default async function DashboardPage() {
 
       <HeroSection />
       <StatsCollage stats={liveStats} />
+
+      <LeaderboardSection topEarners={resolvedEarners} />
 
       <ContentDiscoverySection
         title="Don’t Miss a Beat"

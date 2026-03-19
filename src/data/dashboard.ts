@@ -35,6 +35,7 @@ export const dashboardNavLinks: DashboardNavLink[] = [
   { label: "About", href: "#about" },
   { label: "Community", href: "#community" },
   { label: "How it Works", href: "#how-it-works" },
+  { label: "Leaderboard 🏆", href: "/leaderboard" },
 ];
 
 export const dashboardStats: DashboardStat[] = [

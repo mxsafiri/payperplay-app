@@ -9,11 +9,11 @@ export const auth = betterAuth({
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       if (!process.env.RESEND_API_KEY) {
-        console.warn("RESEND_API_KEY not set — skipping password reset email");
+        console.warn("[auth] RESEND_API_KEY not set — skipping password reset email");
         return;
       }
       const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: "PayPerPlay <noreply@payperplay.xyz>",
         to: user.email,
         subject: "Reset your PayPerPlay password",
@@ -26,6 +26,11 @@ export const auth = betterAuth({
           </div>
         `,
       });
+      if (error) {
+        console.error("[auth] Failed to send password reset email:", error);
+      } else {
+        console.log("[auth] Password reset email sent:", data?.id);
+      }
     },
   },
   socialProviders: {
@@ -40,13 +45,23 @@ export const auth = betterAuth({
       enabled: !!process.env.GITHUB_CLIENT_ID,
     },
   },
-  trustedOrigins: [
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "https://payperplay.xyz",
-    "https://www.payperplay.xyz",
-  ],
+  trustedOrigins: async (request) => {
+    const origins = [
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://payperplay.xyz",
+      "https://www.payperplay.xyz",
+    ].filter(Boolean) as string[];
+
+    // In development, trust any localhost port (autoPort assigns dynamic ports)
+    if (process.env.NODE_ENV !== "production" && request) {
+      const origin = request.headers.get("origin") || "";
+      if (origin.startsWith("http://localhost")) origins.push(origin);
+    }
+
+    return origins;
+  },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
   },
