@@ -179,7 +179,7 @@ export default function FeedPage() {
                     {/* Creator Info */}
                     <div className="absolute bottom-3 left-3 right-3">
                       <div className="flex items-center gap-2">
-                        {item.creator.avatarUrl ? (
+                        {item.creator.avatarUrl?.startsWith("http") ? (
                           <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
                             <Image
                               src={item.creator.avatarUrl}

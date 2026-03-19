@@ -4,6 +4,7 @@ import { follows, profiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 // GET /api/follow/following — list creators the current user follows
 export async function GET() {
@@ -28,13 +29,15 @@ export async function GET() {
       orderBy: (f, { desc }) => [desc(f.createdAt)],
     });
 
-    const following = userFollows.map((f) => ({
-      id: f.creator.id,
-      handle: f.creator.handle,
-      displayName: f.creator.displayName,
-      avatarUrl: f.creator.avatarUrl,
-      followedAt: f.createdAt,
-    }));
+    const following = await Promise.all(
+      userFollows.map(async (f) => ({
+        id: f.creator.id,
+        handle: f.creator.handle,
+        displayName: f.creator.displayName,
+        avatarUrl: await resolveAvatarUrl(f.creator.avatarUrl),
+        followedAt: f.createdAt,
+      }))
+    );
 
     return NextResponse.json({ following });
   } catch (error) {

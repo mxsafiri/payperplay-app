@@ -240,7 +240,7 @@ export default function FanProfilePage() {
         <div className="rounded-2xl border bg-card p-6">
           <div className="flex items-start gap-5">
             <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted shrink-0">
-              {avatarUrl ? (
+              {avatarUrl?.startsWith("http") ? (
                 <Image
                   src={avatarUrl}
                   alt={profile.displayName || profile.handle}
@@ -315,7 +315,7 @@ export default function FanProfilePage() {
               {following.map((creator) => (
                 <div key={creator.id} className="flex items-center gap-3">
                   <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted shrink-0">
-                    {creator.avatarUrl ? (
+                    {creator.avatarUrl?.startsWith("http") ? (
                       <Image
                         src={creator.avatarUrl}
                         alt={creator.displayName || creator.handle}
