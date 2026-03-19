@@ -7,6 +7,9 @@ import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { placeholderCreators } from "@/data/placeholder-creators";
+import { InteractionBar } from "@/components/content/InteractionBar";
+import { CommentSection } from "@/components/content/CommentSection";
+import { TipPanel } from "@/components/content/TipPanel";
 
 interface ContentDetail {
   id: string;
@@ -16,6 +19,7 @@ interface ContentDetail {
   priceTzs: number;
   viewCount: number;
   likeCount: number;
+  commentCount: number;
   contentType: string;
   creator: {
     id: string;
@@ -48,6 +52,8 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showTipPanel, setShowTipPanel] = useState(false);
 
   const PREVIEW_SECONDS = 10;
 
@@ -255,7 +261,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
           <div className="lg:col-span-2 space-y-6">
             {/* Video Player or Locked State */}
             {content.hasAccess && isUpload && streamUrl ? (
-              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
                 <video
                   src={streamUrl}
                   controls
@@ -263,14 +269,46 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                   poster={thumbnailMedia?.url || undefined}
                   controlsList="nodownload"
                 />
+                {/* Floating tip button */}
+                {!showTipPanel && (
+                  <button
+                    onClick={() => setShowTipPanel(true)}
+                    className="absolute bottom-14 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-semibold hover:bg-primary-500 transition-colors"
+                  >
+                    💰 Tip
+                  </button>
+                )}
+                <TipPanel
+                  contentId={contentId}
+                  creatorName={content.creator.displayName || `@${content.creator.handle}`}
+                  walletBalance={walletBalance}
+                  isOpen={showTipPanel}
+                  onClose={() => setShowTipPanel(false)}
+                />
               </div>
             ) : content.hasAccess && embedUrl ? (
-              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
                 <iframe
                   src={embedUrl}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
+                />
+                {/* Tip button for YouTube embeds */}
+                {!showTipPanel && (
+                  <button
+                    onClick={() => setShowTipPanel(true)}
+                    className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-semibold hover:bg-primary-500 transition-colors"
+                  >
+                    💰 Tip
+                  </button>
+                )}
+                <TipPanel
+                  contentId={contentId}
+                  creatorName={content.creator.displayName || `@${content.creator.handle}`}
+                  walletBalance={walletBalance}
+                  isOpen={showTipPanel}
+                  onClose={() => setShowTipPanel(false)}
                 />
               </div>
             ) : content.hasAccess && isUpload && !streamUrl ? (
@@ -342,6 +380,20 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
 
+            {/* Interaction Bar */}
+            <InteractionBar
+              contentId={contentId}
+              initialLikeCount={content.likeCount}
+              initialCommentCount={content.commentCount ?? 0}
+              showComments={showComments}
+              onCommentToggle={() => setShowComments((v) => !v)}
+              onTipClick={() => setShowTipPanel(true)}
+              hasAccess={content.hasAccess}
+            />
+
+            {/* Comments */}
+            {showComments && <CommentSection contentId={contentId} />}
+
             {/* Content Info */}
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -350,10 +402,6 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {content.viewCount} views
-                </span>
-                <span className="text-sm text-muted-foreground">•</span>
-                <span className="text-sm text-muted-foreground">
-                  {content.likeCount} likes
                 </span>
               </div>
 
