@@ -62,6 +62,14 @@ export const auth = betterAuth({
 
     return origins;
   },
+  session: {
+    expiresIn: 60 * 60 * 24 * 30,   // 30 days before full re-login required
+    updateAge: 60 * 60 * 24,         // silently extend session on each daily visit
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,                // cache session in a cookie for 5 min — no server ping on every page load
+    },
+  },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
   },
