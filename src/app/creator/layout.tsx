@@ -19,7 +19,9 @@ import {
   Radio,
   Upload,
   X,
+  Shield,
 } from "lucide-react";
+import { Banner } from "@/components/ui/banner";
 
 const NAV_SECTIONS = [
   {
@@ -62,6 +64,15 @@ export default function CreatorLayout({
 }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [showPolicyBanner, setShowPolicyBanner] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !localStorage.getItem("pp_policy_banner_dismissed");
+  });
+
+  const dismissBanner = () => {
+    setShowPolicyBanner(false);
+    localStorage.setItem("pp_policy_banner_dismissed", Date.now().toString());
+  };
 
   // Don't apply layout to public creator profile pages (/creator/[handle])
   // or the content creation/edit pages that have their own layout
@@ -178,6 +189,23 @@ export default function CreatorLayout({
 
       {/* Main content */}
       <div className="lg:ml-[220px] min-h-screen">
+        {/* Content Policy Banner */}
+        {showPolicyBanner && (
+          <div className="px-4 pt-4 lg:px-6 lg:pt-6">
+            <Banner
+              show={showPolicyBanner}
+              onHide={dismissBanner}
+              icon={<Shield className="w-4 h-4 text-amber-400" />}
+              title={
+                <>
+                  Reminder: You are responsible for all content you upload. Ensure you own or have rights to everything you publish.
+                </>
+              }
+              learnMoreUrl="/creator/content-policy"
+              variant="info"
+            />
+          </div>
+        )}
         {children}
       </div>
     </div>

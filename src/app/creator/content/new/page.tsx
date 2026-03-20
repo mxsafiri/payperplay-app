@@ -4,7 +4,8 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, ArrowLeft, FileVideo, X, ImageIcon } from "lucide-react";
+import { Upload, ArrowLeft, FileVideo, X, ImageIcon, Shield, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useToast, Toaster } from "@/components/ui/toast";
 
 const MAX_VIDEO_SIZE_MB = 500;
@@ -49,6 +50,7 @@ export default function CreateContentPage() {
   const [videoDragging, setVideoDragging] = useState(false);
   const [thumbDragging, setThumbDragging] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
+  const [contentDeclaration, setContentDeclaration] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
@@ -222,6 +224,12 @@ export default function CreateContentPage() {
 
       if (!videoFile) {
         setError("Please select a video file");
+        setLoading(false);
+        return;
+      }
+
+      if (!contentDeclaration && !isDraft) {
+        setError("You must confirm content ownership before publishing");
         setLoading(false);
         return;
       }
@@ -615,6 +623,48 @@ export default function CreateContentPage() {
               </div>
             </div>
 
+            {/* Content Declaration */}
+            <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 backdrop-blur-md bg-amber-500/[0.03]">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+              <div className="relative p-6">
+                <h2 className="text-lg font-semibold tracking-tight mb-1 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-amber-400" />
+                  Content Ownership Declaration
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You must confirm ownership before publishing
+                </p>
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={contentDeclaration}
+                    onChange={(e) => setContentDeclaration(e.target.checked)}
+                    disabled={loading}
+                    className="mt-0.5 w-5 h-5 rounded border-2 border-amber-500/40 bg-transparent text-amber-500 focus:ring-amber-500/50 accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
+                    I declare that I am the <strong className="text-foreground">original creator</strong> of this content or hold all necessary
+                    rights and licenses to distribute it. I confirm this content does not infringe on any
+                    third-party copyrights, trademarks, or intellectual property rights. I understand that
+                    I am <strong className="text-foreground">solely responsible</strong> for the content I publish and any claims arising from it.
+                  </span>
+                </label>
+
+                <div className="mt-3 flex items-center gap-1">
+                  <Link
+                    href="/creator/content-policy"
+                    target="_blank"
+                    className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 flex items-center gap-1"
+                  >
+                    Read full Content Policy & Creator Agreement
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
             {/* Actions */}
             <div className="flex items-center justify-between">
               <Button
@@ -641,11 +691,12 @@ export default function CreateContentPage() {
                 >
                   {loading && isDraft ? "Saving Draft..." : "Save as Draft"}
                 </Button>
-                <Button 
-                  type="submit" 
-                  disabled={loading}
+                <Button
+                  type="submit"
+                  disabled={loading || !contentDeclaration}
                   onClick={() => setIsDraft(false)}
-                  className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02]"
+                  className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  title={!contentDeclaration ? "Confirm content ownership to publish" : undefined}
                 >
                   {loading && !isDraft ? "Publishing..." : "Publish Content"}
                 </Button>
