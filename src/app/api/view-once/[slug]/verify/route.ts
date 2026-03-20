@@ -34,14 +34,33 @@ export async function POST(
       return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
     }
 
-    // If already paid, return success
+    // If already paid, re-set the cookie (client may have missed first response)
     if (purchase.status === "paid") {
+      await activateGuestSession(purchaseId);
       return NextResponse.json({ status: "paid", message: "Payment confirmed" });
+    }
+
+    // If expired/failed, stop polling
+    if (purchase.status === "expired") {
+      return NextResponse.json(
+        { status: "failed", error: "Payment was not completed in time" },
+        { status: 402 }
+      );
     }
 
     // Check deposit status with nTZS
     const ntzs = getNtzsClient();
-    const deposit = await ntzs.deposits.get(depositId);
+    let deposit;
+    try {
+      deposit = await ntzs.deposits.get(depositId);
+    } catch (err) {
+      console.error("[verify] Failed to check deposit status:", err);
+      // Don't error out — let client keep polling
+      return NextResponse.json({
+        status: "pending",
+        message: "Checking payment status...",
+      });
+    }
 
     if (deposit.status === "pending" || deposit.status === "processing") {
       return NextResponse.json({
@@ -68,8 +87,9 @@ export async function POST(
       const result = await completeGuestPurchase(purchaseId);
 
       if (!result.success) {
+        console.error("[verify] completeGuestPurchase failed:", result.error);
         return NextResponse.json(
-          { status: "failed", error: result.error },
+          { status: "failed", error: "Payment received but failed to process. Contact support." },
           { status: 500 }
         );
       }
@@ -84,13 +104,17 @@ export async function POST(
       });
     }
 
-    // Unknown status
+    // Unknown status — keep polling
     return NextResponse.json({
       status: "pending",
       message: "Still processing...",
     });
   } catch (error) {
     console.error("Guest payment verification error:", error);
-    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
+    // Return pending (not 500) so client keeps polling instead of dying
+    return NextResponse.json({
+      status: "pending",
+      message: "Checking payment...",
+    });
   }
 }

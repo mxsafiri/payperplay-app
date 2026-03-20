@@ -40,26 +40,15 @@ export async function createGuestSession(params: {
 
 /**
  * Activate a guest session after payment is confirmed.
- * Sets the httpOnly cookie and updates expiry.
+ * Sets the httpOnly cookie only — purchase status is already updated by completeGuestPurchase.
  */
 export async function activateGuestSession(purchaseId: string): Promise<void> {
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_HOURS * 60 * 60 * 1000);
-
-  await db
-    .update(guestPurchases)
-    .set({
-      status: "paid",
-      expiresAt,
-      updatedAt: new Date(),
-    })
-    .where(eq(guestPurchases.id, purchaseId));
-
-  // Set httpOnly cookie
+  // Set httpOnly cookie so the stream endpoint can validate the session
   const cookieStore = await cookies();
   cookieStore.set(GUEST_COOKIE_NAME, purchaseId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax", // "lax" allows cookie on same-origin fetch + navigations from external links
     path: "/",
     maxAge: SESSION_DURATION_HOURS * 60 * 60,
   });

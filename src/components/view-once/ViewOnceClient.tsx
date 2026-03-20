@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { GuestPaymentForm } from "./GuestPaymentForm";
 import { ConversionBanner } from "./ConversionBanner";
+import { useToast, Toaster } from "@/components/ui/toast";
 import { collectDeviceSignals } from "@/lib/fingerprint";
 
 interface ViewOnceClientProps {
@@ -44,8 +45,10 @@ export function ViewOnceClient({
   );
   const [currentStreamUrl, setCurrentStreamUrl] = useState(streamUrl);
   const [watched, setWatched] = useState(initialWatched);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const teaserTimerRef = useRef(false);
+  const { toasts, toast, dismiss } = useToast();
 
   // Teaser time enforcement
   const handleTeaserTimeUpdate = useCallback(() => {
@@ -57,22 +60,39 @@ export function ViewOnceClient({
     }
   }, [teaserSeconds]);
 
-  // Payment complete — fetch stream URL
+  // Payment complete — fetch stream URL with retry
   const handlePaymentComplete = useCallback(async () => {
-    try {
-      const fp = collectDeviceSignals(slug);
-      const res = await fetch(`/api/view-once/${slug}/stream`, {
-        headers: { "x-device-fingerprint": fp },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentStreamUrl(data.url);
-        setPhase("watching");
+    setStreamError(null);
+    const fp = collectDeviceSignals(slug);
+
+    // Retry up to 3 times with short delays (cookie might not be set yet)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        const res = await fetch(`/api/view-once/${slug}/stream`, {
+          headers: { "x-device-fingerprint": fp },
+          credentials: "same-origin",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentStreamUrl(data.url);
+          setPhase("watching");
+          toast("Video unlocked! Enjoy", "success");
+          return;
+        }
+        const errData = await res.json().catch(() => ({}));
+        console.error(`[stream] Attempt ${attempt + 1} failed:`, res.status, errData);
+      } catch (err) {
+        console.error(`[stream] Attempt ${attempt + 1} network error:`, err);
       }
-    } catch (err) {
-      console.error("Failed to load stream:", err);
     }
-  }, [slug]);
+
+    // All retries failed
+    setStreamError("Failed to load video. Please refresh the page.");
+    toast("Failed to load video — try refreshing", "error");
+  }, [slug, toast]);
 
   // Video ended
   const handleVideoEnded = useCallback(async () => {
@@ -147,6 +167,33 @@ export function ViewOnceClient({
             </div>
           )}
 
+          {/* Loading stream after payment */}
+          {phase === "watching" && !currentStreamUrl && !streamError && (
+            <div className="absolute inset-0 bg-black flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500 mx-auto mb-3" />
+                <p className="text-zinc-400 text-sm">Loading video...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Stream load error */}
+          {streamError && (
+            <div className="absolute inset-0 bg-black flex items-center justify-center">
+              <div className="text-center px-6">
+                <div className="text-4xl mb-3">⚠️</div>
+                <p className="text-white font-bold mb-2">Failed to load video</p>
+                <p className="text-zinc-400 text-sm mb-4">{streamError}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-amber-500 text-black font-bold px-5 py-2.5 rounded-xl text-sm"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Full video */}
           {phase === "watching" && currentStreamUrl && (
             <video
@@ -205,6 +252,7 @@ export function ViewOnceClient({
               priceTzs={priceTzs}
               creatorName={creatorName}
               onPaymentComplete={handlePaymentComplete}
+              onToast={toast}
             />
           </div>
         )}
@@ -223,6 +271,9 @@ export function ViewOnceClient({
           </p>
         </div>
       </main>
+
+      {/* Toast notifications */}
+      <Toaster toasts={toasts} dismiss={dismiss} />
     </div>
   );
 }

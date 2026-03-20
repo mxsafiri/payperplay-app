@@ -8,6 +8,7 @@ interface GuestPaymentFormProps {
   priceTzs: number;
   creatorName: string;
   onPaymentComplete: () => void;
+  onToast?: (message: string, type: "success" | "error") => void;
 }
 
 type PaymentState = "idle" | "submitting" | "polling" | "success" | "error";
@@ -17,6 +18,7 @@ export function GuestPaymentForm({
   priceTzs,
   creatorName,
   onPaymentComplete,
+  onToast,
 }: GuestPaymentFormProps) {
   const [phone, setPhone] = useState("");
   const [state, setState] = useState<PaymentState>("idle");
@@ -63,6 +65,7 @@ export function GuestPaymentForm({
 
         setInstructions(payData.instructions || "Check your phone for the M-Pesa prompt");
         setState("polling");
+        onToast?.("M-Pesa prompt sent! Check your phone", "success");
 
         // Step 2: Poll for confirmation
         const { purchaseId, depositId } = payData;
@@ -76,6 +79,7 @@ export function GuestPaymentForm({
             if (pollRef.current) clearInterval(pollRef.current);
             setError("Payment timed out. Please try again.");
             setState("error");
+            onToast?.("Payment timed out. Please try again.", "error");
             return;
           }
 
@@ -91,12 +95,15 @@ export function GuestPaymentForm({
             if (verifyData.status === "paid") {
               if (pollRef.current) clearInterval(pollRef.current);
               setState("success");
+              onToast?.("Payment confirmed! Unlocking video...", "success");
               // Small delay to show success, then load video
-              setTimeout(() => onPaymentComplete(), 1000);
+              setTimeout(() => onPaymentComplete(), 1500);
             } else if (verifyData.status === "failed") {
               if (pollRef.current) clearInterval(pollRef.current);
-              setError(verifyData.error || "Payment failed");
+              const errorMsg = verifyData.error || "Payment failed";
+              setError(errorMsg);
               setState("error");
+              onToast?.(errorMsg, "error");
             }
             // "pending" — keep polling
           } catch {
@@ -109,7 +116,7 @@ export function GuestPaymentForm({
         setState("error");
       }
     },
-    [phone, slug, onPaymentComplete]
+    [phone, slug, onPaymentComplete, onToast]
   );
 
   return (

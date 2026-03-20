@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { placeholderCreators } from "@/data/placeholder-creators";
@@ -36,11 +37,22 @@ interface ContentDetail {
   hasAccess: boolean;
 }
 
+interface MoreFromCreatorItem {
+  id: string;
+  title: string;
+  priceTzs: number;
+  viewCount: number;
+  contentType: string;
+  category: string;
+  thumbnailUrl: string | null;
+}
+
 interface Props {
   content: ContentDetail;
   contentId: string;
   initialStreamUrl: string | null;
   initialPreviewUrl: string | null;
+  moreFromCreator?: MoreFromCreatorItem[];
 }
 
 const PREVIEW_SECONDS = 10;
@@ -50,6 +62,7 @@ export function ContentDetailClient({
   contentId,
   initialStreamUrl,
   initialPreviewUrl,
+  moreFromCreator = [],
 }: Props) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -338,7 +351,7 @@ export function ContentDetailClient({
             {/* Creator Info */}
             <Card>
               <CardContent className="flex items-center gap-4 p-6">
-                <div className="relative w-16 h-16 rounded-full overflow-hidden">
+                <Link href={`/creator/${content.creator.handle}`} className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
                   <Image
                     src={content.creator.avatarUrl || getCreatorImage(content.creator.id)}
                     alt={content.creator.displayName || content.creator.handle}
@@ -346,11 +359,11 @@ export function ContentDetailClient({
                     className="object-cover"
                     sizes="64px"
                   />
-                </div>
+                </Link>
                 <div className="flex-1">
-                  <h3 className="font-semibold">
+                  <Link href={`/creator/${content.creator.handle}`} className="font-semibold hover:text-primary transition-colors">
                     {content.creator.displayName || `@${content.creator.handle}`}
-                  </h3>
+                  </Link>
                   <p className="text-sm text-muted-foreground">
                     Creator{followerCount > 0 ? ` · ${followerCount} follower${followerCount !== 1 ? "s" : ""}` : ""}
                   </p>
@@ -367,6 +380,73 @@ export function ContentDetailClient({
                 )}
               </CardContent>
             </Card>
+
+            {/* More from this creator */}
+            {moreFromCreator.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">
+                    More from {content.creator.displayName || `@${content.creator.handle}`}
+                  </h2>
+                  <Link
+                    href={`/creator/${content.creator.handle}`}
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    View all &rarr;
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {moreFromCreator.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/content/${item.id}`}
+                      className="group block rounded-lg overflow-hidden border border-border bg-card hover:border-primary/50 transition-colors"
+                    >
+                      <div className="relative aspect-video bg-muted">
+                        {item.thumbnailUrl ? (
+                          <Image
+                            src={item.thumbnailUrl}
+                            alt={item.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 1024px) 50vw, 33vw"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                        )}
+                        {/* Price badge */}
+                        <div className="absolute top-2 right-2">
+                          {item.priceTzs === 0 ? (
+                            <span className="px-2 py-0.5 rounded-full bg-green-500/90 text-white text-xs font-semibold">
+                              FREE
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm text-white text-xs font-semibold">
+                              {item.priceTzs.toLocaleString()} TZS
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                          {item.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                          <span>{item.viewCount} views</span>
+                          <span>·</span>
+                          <span className="capitalize">{item.category}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}

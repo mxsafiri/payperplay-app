@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { content } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { getPresignedReadUrl } from "@/lib/storage/r2";
 import { resolveAvatarUrl } from "@/lib/avatar";
 import { ContentDetailClient } from "@/components/content/ContentDetailClient";
@@ -103,6 +103,55 @@ export default async function ContentDetailPage({
     }
   }
 
+  // Fetch other content by this creator (excluding current)
+  const moreFromCreator = await db.query.content.findMany({
+    where: and(
+      eq(content.creatorId, contentItem.creatorId),
+      ne(content.id, id),
+      eq(content.status, "published")
+    ),
+    columns: {
+      id: true,
+      title: true,
+      priceTzs: true,
+      viewCount: true,
+      contentType: true,
+      category: true,
+    },
+    with: {
+      media: {
+        columns: { id: true, mediaType: true, url: true, storageKey: true },
+      },
+    },
+    limit: 6,
+    orderBy: (c, { desc }) => [desc(c.createdAt)],
+  });
+
+  // Resolve thumbnails for "more from creator" content
+  const resolvedMoreFromCreator = await Promise.all(
+    moreFromCreator.map(async (item) => {
+      const thumb = item.media?.find((m) => m.mediaType === "thumbnail");
+      let thumbnailUrl: string | null = thumb?.url || null;
+      if (thumb?.storageKey && !thumb.url) {
+        try {
+          thumbnailUrl = await getPresignedReadUrl({
+            key: thumb.storageKey,
+            expiresInSeconds: 7 * 24 * 3600,
+          });
+        } catch { /* non-fatal */ }
+      }
+      return {
+        id: item.id,
+        title: item.title,
+        priceTzs: item.priceTzs,
+        viewCount: item.viewCount ?? 0,
+        contentType: item.contentType,
+        category: item.category,
+        thumbnailUrl,
+      };
+    })
+  );
+
   const contentData = {
     id: contentItem.id,
     title: contentItem.title,
@@ -124,6 +173,7 @@ export default async function ContentDetailPage({
       contentId={id}
       initialStreamUrl={streamUrl}
       initialPreviewUrl={previewUrl}
+      moreFromCreator={resolvedMoreFromCreator}
     />
   );
 }
