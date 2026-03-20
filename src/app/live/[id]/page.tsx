@@ -98,6 +98,9 @@ export default async function LiveStreamPage({ params }: Props) {
         cfWebRtcUrl: stream.cfStreamInputUid
           ? getPlaybackUrls(stream.cfStreamInputUid).webrtc
           : stream.cfWebRtcUrl,
+        cfIframeUrl: stream.cfStreamInputUid
+          ? getPlaybackUrls(stream.cfStreamInputUid).iframe
+          : null,
         startedAt: stream.startedAt?.toISOString() || null,
       }}
       creator={{

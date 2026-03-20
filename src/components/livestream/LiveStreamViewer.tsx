@@ -31,6 +31,7 @@ interface StreamData {
   viewerCount: number;
   cfPlaybackUrl: string | null;
   cfWebRtcUrl: string | null;
+  cfIframeUrl: string | null;
   startedAt: string | null;
 }
 
@@ -70,7 +71,6 @@ export default function LiveStreamViewer({
   const [liked, setLiked] = useState(false);
   const [streamStatus, setStreamStatus] = useState(stream.status);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const [sendingChat, setSendingChat] = useState(false);
 
@@ -147,220 +147,12 @@ export default function LiveStreamViewer({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Video playback: WebRTC (WHEP) first, HLS fallback ──
-  const [videoLoading, setVideoLoading] = useState(true);
-  const [videoError, setVideoError] = useState(false);
-  const retryCountRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hlsRef = useRef<any>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const playbackModeRef = useRef<"webrtc" | "hls">("webrtc");
-
-  // Cleanup helper
-  const cleanupPlayback = useCallback(() => {
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-    if (hlsRef.current?.destroy) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
-  }, []);
-
-  const scheduleRetry = useCallback(() => {
-    retryCountRef.current++;
-    if (retryCountRef.current > 40) {
-      setVideoLoading(false);
-      setVideoError(true);
-      return;
-    }
-    const delay = Math.min(3000 + retryCountRef.current * 300, 5000);
-    retryTimerRef.current = setTimeout(() => {
-      startPlayback();
-    }, delay);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // WebRTC (WHEP) playback — instant, low-latency
-  const startWebRtcPlayback = useCallback(async () => {
-    if (!stream.cfWebRtcUrl || !videoRef.current) return false;
-
-    try {
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
-        bundlePolicy: "max-bundle",
-      });
-      pcRef.current = pc;
-
-      // Add transceivers for receiving
-      pc.addTransceiver("video", { direction: "recvonly" });
-      pc.addTransceiver("audio", { direction: "recvonly" });
-
-      // Attach remote stream to video element
-      pc.ontrack = (event) => {
-        if (videoRef.current && event.streams[0]) {
-          videoRef.current.srcObject = event.streams[0];
-          videoRef.current.play().catch(() => {});
-          setVideoLoading(false);
-          setVideoError(false);
-          retryCountRef.current = 0;
-        }
-      };
-
-      // Create SDP offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      // Wait for ICE gathering
-      await new Promise<void>((resolve) => {
-        if (pc.iceGatheringState === "complete") {
-          resolve();
-        } else {
-          const onGather = () => {
-            if (pc.iceGatheringState === "complete") {
-              pc.removeEventListener("icegatheringstatechange", onGather);
-              resolve();
-            }
-          };
-          pc.addEventListener("icegatheringstatechange", onGather);
-          setTimeout(resolve, 3000);
-        }
-      });
-
-      // Send offer to WHEP endpoint
-      const res = await fetch(stream.cfWebRtcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/sdp" },
-        body: pc.localDescription?.sdp,
-      });
-
-      if (!res.ok) {
-        pc.close();
-        pcRef.current = null;
-        return false;
-      }
-
-      const answerSdp = await res.text();
-      await pc.setRemoteDescription(new RTCSessionDescription({
-        type: "answer",
-        sdp: answerSdp,
-      }));
-
-      // Handle disconnection — retry
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-          pc.close();
-          pcRef.current = null;
-          scheduleRetry();
-        }
-      };
-
-      playbackModeRef.current = "webrtc";
-      return true;
-    } catch {
-      if (pcRef.current) {
-        pcRef.current.close();
-        pcRef.current = null;
-      }
-      return false;
-    }
-  }, [stream.cfWebRtcUrl, scheduleRetry]);
-
-  // HLS fallback
-  const startHlsPlayback = useCallback(() => {
-    if (!stream.cfPlaybackUrl || !videoRef.current) return;
-
-    const video = videoRef.current;
-    playbackModeRef.current = "hls";
-
-    const onPlaying = () => {
-      setVideoLoading(false);
-      setVideoError(false);
-      retryCountRef.current = 0;
-    };
-
-    // Native HLS (Safari/iOS)
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = stream.cfPlaybackUrl;
-      video.addEventListener("playing", onPlaying, { once: true });
-      video.addEventListener("error", () => scheduleRetry(), { once: true });
-      video.play().catch(() => scheduleRetry());
-      return;
-    }
-
-    // hls.js
-    import("hls.js").then(({ default: Hls }) => {
-      if (!Hls.isSupported()) {
-        video.src = stream.cfPlaybackUrl!;
-        video.addEventListener("playing", onPlaying, { once: true });
-        video.play().catch(() => scheduleRetry());
-        return;
-      }
-
-      const hls = new Hls({
-        lowLatencyMode: true,
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 6,
-        manifestLoadingRetryDelay: 2000,
-        manifestLoadingMaxRetry: 6,
-        levelLoadingRetryDelay: 2000,
-        levelLoadingMaxRetry: 6,
-      });
-
-      hlsRef.current = hls;
-      hls.loadSource(stream.cfPlaybackUrl!);
-      hls.attachMedia(video);
-
-      video.addEventListener("playing", onPlaying, { once: true });
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {});
-      });
-
-      hls.on(Hls.Events.ERROR, (_event: string, data: { fatal: boolean; type: string }) => {
-        if (data.fatal) {
-          hls.destroy();
-          hlsRef.current = null;
-          scheduleRetry();
-        }
-      });
-    }).catch(() => scheduleRetry());
-  }, [stream.cfPlaybackUrl, scheduleRetry]);
-
-  // Main playback starter: try WebRTC first, fall back to HLS
-  const startPlayback = useCallback(async () => {
-    if (!videoRef.current || !hasAccess || !isLive) return;
-
-    cleanupPlayback();
-    setVideoLoading(true);
-    setVideoError(false);
-
-    // Try WebRTC first (instant playback)
-    if (stream.cfWebRtcUrl) {
-      const success = await startWebRtcPlayback();
-      if (success) return;
-    }
-
-    // Fall back to HLS
-    if (stream.cfPlaybackUrl) {
-      startHlsPlayback();
-      return;
-    }
-
-    // No playback URL available
-    scheduleRetry();
-  }, [hasAccess, isLive, stream.cfWebRtcUrl, stream.cfPlaybackUrl, cleanupPlayback, startWebRtcPlayback, startHlsPlayback, scheduleRetry]);
-
-  useEffect(() => {
-    startPlayback();
-    return () => cleanupPlayback();
-  }, [startPlayback, cleanupPlayback]);
+  // ── Cloudflare Stream iframe player ──
+  // Uses Cloudflare's built-in player which handles WebRTC/HLS/codec negotiation automatically
+  const iframeUrl = stream.cfIframeUrl
+    ? `${stream.cfIframeUrl}?autoplay=true&muted=true&preload=true&loop=false&controls=true&poster=`
+    : null;
+  const [iframeLoaded, setIframeLoaded] = useState(false);
 
   // ── Send chat message ──
   const handleSendMessage = async () => {
@@ -593,44 +385,23 @@ export default function LiveStreamViewer({
               </div>
             )}
 
-            {stream.cfPlaybackUrl && (isLive || streamStatus === "idle") && hasAccess ? (
+            {iframeUrl && (isLive || streamStatus === "idle") && hasAccess ? (
               <div className="relative w-full h-full">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-contain"
-                  autoPlay
-                  playsInline
-                  muted
-                  controls
+                {/* Cloudflare Stream iframe player — handles WebRTC/HLS/codecs automatically */}
+                <iframe
+                  src={iframeUrl}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  onLoad={() => setIframeLoaded(true)}
                 />
-                {/* Loading overlay */}
-                {isLive && videoLoading && (
+                {/* Loading overlay until iframe loads */}
+                {isLive && !iframeLoaded && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
                     <div className="text-center">
                       <Loader2 className="w-10 h-10 text-red-400 animate-spin mx-auto mb-3" />
                       <p className="text-sm text-white font-medium">Connecting to live stream...</p>
                       <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
-                    </div>
-                  </div>
-                )}
-                {/* Error overlay with retry */}
-                {isLive && videoError && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-                    <div className="text-center">
-                      <Radio className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
-                      <p className="text-sm text-white font-medium mb-1">Stream not available yet</p>
-                      <p className="text-xs text-muted-foreground mb-4">The stream may still be starting up</p>
-                      <Button
-                        onClick={() => {
-                          retryCountRef.current = 0;
-                          startPlayback();
-                        }}
-                        size="sm"
-                        className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                      >
-                        <Radio className="w-4 h-4" />
-                        Try Again
-                      </Button>
                     </div>
                   </div>
                 )}
