@@ -6,8 +6,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, Heart, MessageCircle, ArrowLeft, Film, Plus, Save, Trash2, Send } from "lucide-react";
+import { Eye, Heart, MessageCircle, ArrowLeft, Film, Plus, Save, Trash2, Send, Share2, Copy, Check, Link2, ExternalLink } from "lucide-react";
 import { useToast, Toaster } from "@/components/ui/toast";
+
+interface ViewOnceLink {
+  id: string;
+  slug: string;
+  url: string;
+  priceTzs: number;
+  teaserSeconds: number;
+  purchaseCount: number;
+  isActive: boolean;
+  createdAt: string;
+}
 
 interface MediaItem {
   id: string;
@@ -75,6 +86,14 @@ export default function ContentEditPage() {
 
   // Delete
   const [deleting, setDeleting] = useState(false);
+
+  // View-once links
+  const [viewOnceLinks, setViewOnceLinks] = useState<ViewOnceLink[]>([]);
+  const [creatingLink, setCreatingLink] = useState(false);
+  const [linkPrice, setLinkPrice] = useState("");
+  const [linkTeaser, setLinkTeaser] = useState("10");
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [showLinkForm, setShowLinkForm] = useState(false);
 
   useEffect(() => {
     fetchContent();
@@ -221,6 +240,75 @@ export default function ContentEditPage() {
     }
   };
 
+  // Fetch existing view-once links for this content
+  const fetchViewOnceLinks = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/view-once?contentId=${contentId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setViewOnceLinks(data.links || []);
+      }
+    } catch {
+      // non-critical
+    }
+  }, [contentId]);
+
+  useEffect(() => {
+    fetchViewOnceLinks();
+  }, [fetchViewOnceLinks]);
+
+  const handleCreateLink = async () => {
+    const price = Number(linkPrice);
+    if (!price || price < 100) {
+      toast("Minimum price is 100 TZS", "error");
+      return;
+    }
+    setCreatingLink(true);
+    try {
+      const res = await fetch("/api/view-once", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentId,
+          priceTzs: price,
+          teaserSeconds: Number(linkTeaser) || 10,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast("Share link created! Copy and share it on social media.", "success");
+        setShowLinkForm(false);
+        setLinkPrice("");
+        fetchViewOnceLinks();
+      } else {
+        toast(data.error || "Failed to create link", "error");
+      }
+    } catch {
+      toast("Failed to create link", "error");
+    } finally {
+      setCreatingLink(false);
+    }
+  };
+
+  const copyToClipboard = async (url: string, slug: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedSlug(slug);
+      toast("Link copied!", "success");
+      setTimeout(() => setCopiedSlug(null), 2000);
+    } catch {
+      toast("Failed to copy", "error");
+    }
+  };
+
+  const shareLink = (url: string, title: string) => {
+    if (navigator.share) {
+      navigator.share({ title, url }).catch(() => {});
+    } else {
+      copyToClipboard(url, "");
+    }
+  };
+
   const getYouTubeEmbedUrl = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|v=)([^&?/]+)/);
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
@@ -347,6 +435,140 @@ export default function ContentEditPage() {
             </div>
           ))}
         </div>
+
+        {/* Share Links */}
+        {content.status === "published" && (
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 backdrop-blur-md bg-gradient-to-br from-amber-500/5 to-orange-500/5">
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-amber-400" />
+                  <h2 className="text-lg font-semibold tracking-tight">Share & Earn</h2>
+                </div>
+                {!showLinkForm && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setShowLinkForm(true);
+                      setLinkPrice(String(content.priceTzs || 500));
+                    }}
+                    className="bg-amber-500 hover:bg-amber-400 text-black text-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Create Link
+                  </Button>
+                )}
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-4">
+                Generate view-once links to share on WhatsApp, Instagram, Twitter — fans pay with M-Pesa, no account needed.
+              </p>
+
+              {/* Create link form */}
+              {showLinkForm && (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">Price (TZS)</label>
+                      <Input
+                        type="number"
+                        value={linkPrice}
+                        onChange={(e) => setLinkPrice(e.target.value)}
+                        min={100}
+                        placeholder="500"
+                        className="bg-white/5 border-white/10"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-xs text-muted-foreground mb-1 block">Preview (s)</label>
+                      <Input
+                        type="number"
+                        value={linkTeaser}
+                        onChange={(e) => setLinkTeaser(e.target.value)}
+                        min={5}
+                        max={30}
+                        className="bg-white/5 border-white/10"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleCreateLink}
+                      disabled={creatingLink}
+                      className="bg-amber-500 hover:bg-amber-400 text-black"
+                    >
+                      <Link2 className="w-3.5 h-3.5 mr-1" />
+                      {creatingLink ? "Creating..." : "Generate Link"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowLinkForm(false)}
+                      className="text-muted-foreground"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing links */}
+              {viewOnceLinks.length > 0 ? (
+                <div className="space-y-2">
+                  {viewOnceLinks.map((vl) => (
+                    <div
+                      key={vl.id}
+                      className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs text-amber-400 font-mono truncate">
+                            payperplay.xyz/v/{vl.slug}
+                          </code>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {vl.priceTzs.toLocaleString()} TZS
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {vl.purchaseCount} purchase{vl.purchaseCount !== 1 ? "s" : ""} &middot; {vl.teaserSeconds}s preview
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(vl.url, vl.slug)}
+                          className="h-8 w-8 p-0 hover:bg-white/10"
+                        >
+                          {copiedSlug === vl.slug ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => shareLink(vl.url, content.title)}
+                          className="h-8 w-8 p-0 hover:bg-white/10"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !showLinkForm ? (
+                <div className="text-center py-4 bg-white/[0.02] rounded-xl border border-dashed border-white/10">
+                  <Share2 className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
+                  <p className="text-xs text-muted-foreground">
+                    No share links yet — create one to start earning from social media
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
 
         {/* Edit Form */}
         <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">

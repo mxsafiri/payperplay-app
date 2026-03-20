@@ -6,7 +6,53 @@ import { db } from "@/db";
 import { viewOnceLinks, content, profiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.userId, session.user.id),
+    });
+
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    const contentId = req.nextUrl.searchParams.get("contentId");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://payperplay.xyz";
+
+    const where = contentId
+      ? and(eq(viewOnceLinks.creatorId, profile.id), eq(viewOnceLinks.contentId, contentId))
+      : eq(viewOnceLinks.creatorId, profile.id);
+
+    const links = await db.query.viewOnceLinks.findMany({
+      where,
+      orderBy: desc(viewOnceLinks.createdAt),
+      limit: 50,
+    });
+
+    return NextResponse.json({
+      links: links.map((l) => ({
+        id: l.id,
+        slug: l.slug,
+        url: `${appUrl}/v/${l.slug}`,
+        priceTzs: l.priceTzs,
+        teaserSeconds: l.teaserSeconds,
+        purchaseCount: l.purchaseCount,
+        isActive: l.isActive,
+        createdAt: l.createdAt?.toISOString(),
+      })),
+    });
+  } catch (error) {
+    console.error("List view-once links error:", error);
+    return NextResponse.json({ error: "Failed to fetch links" }, { status: 500 });
+  }
+}
 
 function generateSlug(): string {
   const chars = "abcdefghijkmnpqrstuvwxyz23456789"; // no confusing chars (0/O, 1/l)
