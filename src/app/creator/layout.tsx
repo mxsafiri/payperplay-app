@@ -15,6 +15,7 @@ import {
   Wallet,
   Share2,
   Settings,
+  Radio,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -25,6 +26,7 @@ const NAV_SECTIONS = [
       { href: "/creator/content", label: "Content", icon: Film },
       { href: "/creator/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/creator/earnings", label: "Earnings", icon: Wallet },
+      { href: "/creator/live", label: "Go Live", icon: Radio },
     ],
   },
   {
@@ -61,7 +63,7 @@ export default function CreatorLayout({
   // Don't apply layout to public creator profile pages (/creator/[handle])
   // or the content creation/edit pages that have their own layout
   const isProfilePage = /^\/creator\/[^/]+$/.test(pathname) &&
-    !["dashboard", "content", "analytics", "earnings", "playlists", "share-earn", "profile"].includes(pathname.split("/")[2]);
+    !["dashboard", "content", "analytics", "earnings", "playlists", "share-earn", "profile", "live"].includes(pathname.split("/")[2]);
 
   if (isProfilePage) {
     return <>{children}</>;

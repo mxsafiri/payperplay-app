@@ -58,6 +58,7 @@ export const walletTxTypeEnum = pgEnum('wallet_tx_type', ['earning', 'withdrawal
 export const walletTxStatusEnum = pgEnum('wallet_tx_status', ['pending', 'completed', 'failed']);
 export const subStatusEnum = pgEnum('sub_status', ['trial', 'active', 'grace', 'expired']);
 export const guestPurchaseStatusEnum = pgEnum('guest_purchase_status', ['pending', 'paid', 'expired', 'converted']);
+export const livestreamStatusEnum = pgEnum('livestream_status', ['idle', 'live', 'ended']);
 
 // Profiles table (extends neon_auth.user)
 export const profiles = pgTable('profiles', {
@@ -317,6 +318,45 @@ export const guestPurchases = pgTable('guest_purchases', {
   statusIdx: index('guest_purchases_status_idx').on(table.status),
 }));
 
+// Livestreams (Cloudflare Stream Live)
+export const livestreams = pgTable('livestreams', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  creatorId: uuid('creator_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category').notNull().default('entertainment'),
+  status: livestreamStatusEnum('status').notNull().default('idle'),
+  priceTzs: integer('price_tzs').notNull().default(0), // 0 = free
+  thumbnailUrl: text('thumbnail_url'),
+  // Cloudflare Stream Live input
+  cfStreamInputId: text('cf_stream_input_id'), // Cloudflare live input ID
+  cfStreamInputUid: text('cf_stream_input_uid'), // Cloudflare live input UID
+  rtmpUrl: text('rtmp_url'), // RTMP ingest URL (rtmps://live.cloudflare.com:443/live/)
+  rtmpKey: text('rtmp_key'), // Stream key for OBS
+  srtUrl: text('srt_url'), // SRT ingest URL (alternative to RTMP)
+  // Playback
+  cfPlaybackUrl: text('cf_playback_url'), // HLS playback URL
+  cfWebRtcUrl: text('cf_webrtc_url'), // WebRTC low-latency playback URL
+  // Stats
+  viewerCount: integer('viewer_count').default(0),
+  peakViewerCount: integer('peak_viewer_count').default(0),
+  totalViews: integer('total_views').default(0),
+  // Recording/VOD
+  recordingEnabled: boolean('recording_enabled').notNull().default(true),
+  cfRecordingVideoId: text('cf_recording_video_id'), // Cloudflare Stream video ID of recording
+  vodContentId: uuid('vod_content_id').references(() => content.id), // Saved as regular content
+  // Timestamps
+  scheduledAt: timestamp('scheduled_at'), // NULL = go live immediately
+  startedAt: timestamp('started_at'),
+  endedAt: timestamp('ended_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index('livestreams_creator_id_idx').on(table.creatorId),
+  statusIdx: index('livestreams_status_idx').on(table.status),
+  scheduledAtIdx: index('livestreams_scheduled_at_idx').on(table.scheduledAt),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   creatorProfile: one(creatorProfiles, {
@@ -339,6 +379,7 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   likes: many(likes),
   comments: many(comments),
   viewOnceLinks: many(viewOnceLinks),
+  livestreams: many(livestreams),
 }));
 
 export const contentRelations = relations(content, ({ one, many }) => ({
@@ -487,5 +528,16 @@ export const guestPurchasesRelations = relations(guestPurchases, ({ one }) => ({
   link: one(viewOnceLinks, {
     fields: [guestPurchases.viewOnceLinkId],
     references: [viewOnceLinks.id],
+  }),
+}));
+
+export const livestreamsRelations = relations(livestreams, ({ one }) => ({
+  creator: one(profiles, {
+    fields: [livestreams.creatorId],
+    references: [profiles.id],
+  }),
+  vodContent: one(content, {
+    fields: [livestreams.vodContentId],
+    references: [content.id],
   }),
 }));
