@@ -8,3 +8,59 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Prevent caching of authenticated pages — session cookies must be sent to server
+# Without this, Netlify's Durable Cache serves stale static HTML and users appear logged out
+[[headers]]
+  for = "/creator/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/dashboard"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/feed"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/wallet"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/profile"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/library"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/live/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/api/auth/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/api/creator/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
