@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
@@ -16,6 +17,8 @@ import {
   Share2,
   Settings,
   Radio,
+  Upload,
+  X,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -171,21 +174,124 @@ export default function CreatorLayout({
       </aside>
 
       {/* Bottom tab bar — mobile */}
+      <MobileBottomNav isActive={isActive} />
+
+      {/* Main content */}
+      <div className="lg:ml-[220px] min-h-screen">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile Bottom Nav with FAB Action Sheet ──────────────────────────
+
+function MobileBottomNav({ isActive }: { isActive: (href: string) => boolean }) {
+  const [showActions, setShowActions] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!showActions) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowActions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showActions]);
+
+  // Close on route change
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowActions(false);
+  }, [pathname]);
+
+  const navItems = MOBILE_NAV.filter((item) => !item.isFab);
+
+  return (
+    <>
+      {/* Backdrop */}
+      {showActions && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowActions(false)} />
+      )}
+
+      {/* Action sheet popup */}
+      {showActions && (
+        <div
+          ref={menuRef}
+          className="lg:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-56 bg-background border border-white/15 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200"
+        >
+          <Link
+            href="/creator/content/new"
+            className="flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors border-b border-white/10"
+            onClick={() => setShowActions(false)}
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
+              <Upload className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Upload Content</p>
+              <p className="text-[11px] text-muted-foreground">Video, music, or media</p>
+            </div>
+          </Link>
+          <Link
+            href="/creator/live"
+            className="flex items-center gap-3 px-5 py-4 hover:bg-white/5 active:bg-white/10 transition-colors"
+            onClick={() => setShowActions(false)}
+          >
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center">
+              <Radio className="w-5 h-5 text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Go Live</p>
+              <p className="text-[11px] text-muted-foreground">Stream to your audience</p>
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* Bottom bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 backdrop-blur-xl bg-background/95">
         <div className="flex items-stretch h-16 max-w-md mx-auto">
-          {MOBILE_NAV.map((item) => {
-            if (item.isFab) {
-              return (
-                <div key={item.href} className="flex-1 flex items-center justify-center">
-                  <Link
-                    href={item.href}
-                    className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30 -mt-5 active:scale-95 transition-transform"
-                  >
-                    <Plus className="w-6 h-6 text-white" />
-                  </Link>
-                </div>
-              );
-            }
+          {/* First two nav items */}
+          {navItems.slice(0, 2).map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+                  active ? "text-amber-400" : "text-muted-foreground"
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${active ? "scale-110" : ""} transition-transform`} />
+                {item.label}
+              </Link>
+            );
+          })}
+
+          {/* FAB — plus button */}
+          <div className="flex-1 flex items-center justify-center">
+            <button
+              onClick={() => setShowActions(!showActions)}
+              className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg -mt-5 active:scale-95 transition-all ${
+                showActions
+                  ? "bg-white/20 shadow-white/10 rotate-45"
+                  : "bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/30"
+              }`}
+            >
+              {showActions ? (
+                <X className="w-6 h-6 text-white" />
+              ) : (
+                <Plus className="w-6 h-6 text-white" />
+              )}
+            </button>
+          </div>
+
+          {/* Last two nav items */}
+          {navItems.slice(2).map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -202,11 +308,6 @@ export default function CreatorLayout({
           })}
         </div>
       </nav>
-
-      {/* Main content */}
-      <div className="lg:ml-[220px] min-h-screen">
-        {children}
-      </div>
-    </div>
+    </>
   );
 }
