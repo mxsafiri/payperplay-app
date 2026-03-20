@@ -94,11 +94,6 @@ export function ContentDetailClient({
       if (res.ok) {
         const data = await res.json();
         setStreamUrl(data.streamUrl);
-      } else if (res.status === 403) {
-        const data = await res.json();
-        if (data.error === "subscription_required") {
-          router.push("/subscribe");
-        }
       }
     } catch { /* non-critical */ }
   }, [contentId, router]);

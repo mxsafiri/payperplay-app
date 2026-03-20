@@ -6,7 +6,6 @@ import { content } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getPresignedReadUrl } from "@/lib/storage/r2";
 import { resolveAvatarUrl } from "@/lib/avatar";
-import { getSubscriptionStatus } from "@/lib/subscription";
 import { ContentDetailClient } from "@/components/content/ContentDetailClient";
 
 export default async function ContentDetailPage({
@@ -34,7 +33,7 @@ export default async function ContentDetailPage({
 
   if (!contentItem) redirect("/feed");
 
-  // Resolve profile (needed for access + subscription checks)
+  // Resolve profile (needed for access checks)
   let profile: { id: string; role: string } | null = null;
   if (session) {
     profile = await db.query.profiles.findFirst({
@@ -87,13 +86,6 @@ export default async function ContentDetailPage({
 
   if (isUpload && videoMedia?.storageKey) {
     if (hasAccess && profile) {
-      const isCreator = profile.id === contentItem.creatorId;
-      if (!isCreator) {
-        const subStatus = await getSubscriptionStatus(profile.id);
-        if (!subStatus.hasAccess) {
-          redirect("/subscribe");
-        }
-      }
       try {
         streamUrl = await getPresignedReadUrl({
           key: videoMedia.storageKey,
