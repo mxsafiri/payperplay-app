@@ -150,7 +150,7 @@ export default function LiveStreamViewer({
   // ── Cloudflare Stream iframe player ──
   // Uses Cloudflare's built-in player which handles WebRTC/HLS/codec negotiation automatically
   const iframeUrl = stream.cfIframeUrl
-    ? `${stream.cfIframeUrl}?autoplay=true&muted=true&preload=true&loop=false&controls=true&poster=`
+    ? `${stream.cfIframeUrl}?autoplay=true&muted=true&preload=true&controls=true`
     : null;
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
