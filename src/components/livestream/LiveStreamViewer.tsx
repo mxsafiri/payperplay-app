@@ -147,20 +147,137 @@ export default function LiveStreamViewer({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── HLS playback with retry ──
+  // ── Video playback: WebRTC (WHEP) first, HLS fallback ──
   const [videoLoading, setVideoLoading] = useState(true);
   const [videoError, setVideoError] = useState(false);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hlsRef = useRef<any>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const playbackModeRef = useRef<"webrtc" | "hls">("webrtc");
 
-  const loadHls = useCallback(() => {
-    if (!stream.cfPlaybackUrl || !videoRef.current || !hasAccess || !isLive) return;
+  // Cleanup helper
+  const cleanupPlayback = useCallback(() => {
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (hlsRef.current?.destroy) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleRetry = useCallback(() => {
+    retryCountRef.current++;
+    if (retryCountRef.current > 40) {
+      setVideoLoading(false);
+      setVideoError(true);
+      return;
+    }
+    const delay = Math.min(3000 + retryCountRef.current * 300, 5000);
+    retryTimerRef.current = setTimeout(() => {
+      startPlayback();
+    }, delay);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // WebRTC (WHEP) playback — instant, low-latency
+  const startWebRtcPlayback = useCallback(async () => {
+    if (!stream.cfWebRtcUrl || !videoRef.current) return false;
+
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
+        bundlePolicy: "max-bundle",
+      });
+      pcRef.current = pc;
+
+      // Add transceivers for receiving
+      pc.addTransceiver("video", { direction: "recvonly" });
+      pc.addTransceiver("audio", { direction: "recvonly" });
+
+      // Attach remote stream to video element
+      pc.ontrack = (event) => {
+        if (videoRef.current && event.streams[0]) {
+          videoRef.current.srcObject = event.streams[0];
+          videoRef.current.play().catch(() => {});
+          setVideoLoading(false);
+          setVideoError(false);
+          retryCountRef.current = 0;
+        }
+      };
+
+      // Create SDP offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Wait for ICE gathering
+      await new Promise<void>((resolve) => {
+        if (pc.iceGatheringState === "complete") {
+          resolve();
+        } else {
+          const onGather = () => {
+            if (pc.iceGatheringState === "complete") {
+              pc.removeEventListener("icegatheringstatechange", onGather);
+              resolve();
+            }
+          };
+          pc.addEventListener("icegatheringstatechange", onGather);
+          setTimeout(resolve, 3000);
+        }
+      });
+
+      // Send offer to WHEP endpoint
+      const res = await fetch(stream.cfWebRtcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: pc.localDescription?.sdp,
+      });
+
+      if (!res.ok) {
+        pc.close();
+        pcRef.current = null;
+        return false;
+      }
+
+      const answerSdp = await res.text();
+      await pc.setRemoteDescription(new RTCSessionDescription({
+        type: "answer",
+        sdp: answerSdp,
+      }));
+
+      // Handle disconnection — retry
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          pc.close();
+          pcRef.current = null;
+          scheduleRetry();
+        }
+      };
+
+      playbackModeRef.current = "webrtc";
+      return true;
+    } catch {
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      return false;
+    }
+  }, [stream.cfWebRtcUrl, scheduleRetry]);
+
+  // HLS fallback
+  const startHlsPlayback = useCallback(() => {
+    if (!stream.cfPlaybackUrl || !videoRef.current) return;
 
     const video = videoRef.current;
-    setVideoLoading(true);
-    setVideoError(false);
+    playbackModeRef.current = "hls";
 
     const onPlaying = () => {
       setVideoLoading(false);
@@ -168,43 +285,20 @@ export default function LiveStreamViewer({
       retryCountRef.current = 0;
     };
 
-    const scheduleRetry = () => {
-      retryCountRef.current++;
-      if (retryCountRef.current > 30) {
-        // After ~2 minutes of retrying, show error
-        setVideoLoading(false);
-        setVideoError(true);
-        return;
-      }
-      // Retry every 3-4 seconds
-      const delay = Math.min(3000 + retryCountRef.current * 500, 5000);
-      retryTimerRef.current = setTimeout(() => {
-        loadHls();
-      }, delay);
-    };
-
-    // Cleanup previous
-    if (hlsRef.current?.destroy) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-    video.removeEventListener("playing", onPlaying);
-
     // Native HLS (Safari/iOS)
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = stream.cfPlaybackUrl;
-      video.addEventListener("playing", onPlaying);
+      video.addEventListener("playing", onPlaying, { once: true });
       video.addEventListener("error", () => scheduleRetry(), { once: true });
       video.play().catch(() => scheduleRetry());
       return;
     }
 
-    // hls.js for other browsers
+    // hls.js
     import("hls.js").then(({ default: Hls }) => {
       if (!Hls.isSupported()) {
-        // Fallback: try native
         video.src = stream.cfPlaybackUrl!;
-        video.addEventListener("playing", onPlaying);
+        video.addEventListener("playing", onPlaying, { once: true });
         video.play().catch(() => scheduleRetry());
         return;
       }
@@ -214,17 +308,16 @@ export default function LiveStreamViewer({
         liveSyncDurationCount: 3,
         liveMaxLatencyDurationCount: 6,
         manifestLoadingRetryDelay: 2000,
-        manifestLoadingMaxRetry: 10,
+        manifestLoadingMaxRetry: 6,
         levelLoadingRetryDelay: 2000,
-        levelLoadingMaxRetry: 10,
+        levelLoadingMaxRetry: 6,
       });
 
       hlsRef.current = hls;
-
       hls.loadSource(stream.cfPlaybackUrl!);
       hls.attachMedia(video);
 
-      video.addEventListener("playing", onPlaying);
+      video.addEventListener("playing", onPlaying, { once: true });
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(() => {});
@@ -237,24 +330,37 @@ export default function LiveStreamViewer({
           scheduleRetry();
         }
       });
-    }).catch(() => {
-      scheduleRetry();
-    });
-  }, [stream.cfPlaybackUrl, hasAccess, isLive]);
+    }).catch(() => scheduleRetry());
+  }, [stream.cfPlaybackUrl, scheduleRetry]);
+
+  // Main playback starter: try WebRTC first, fall back to HLS
+  const startPlayback = useCallback(async () => {
+    if (!videoRef.current || !hasAccess || !isLive) return;
+
+    cleanupPlayback();
+    setVideoLoading(true);
+    setVideoError(false);
+
+    // Try WebRTC first (instant playback)
+    if (stream.cfWebRtcUrl) {
+      const success = await startWebRtcPlayback();
+      if (success) return;
+    }
+
+    // Fall back to HLS
+    if (stream.cfPlaybackUrl) {
+      startHlsPlayback();
+      return;
+    }
+
+    // No playback URL available
+    scheduleRetry();
+  }, [hasAccess, isLive, stream.cfWebRtcUrl, stream.cfPlaybackUrl, cleanupPlayback, startWebRtcPlayback, startHlsPlayback, scheduleRetry]);
 
   useEffect(() => {
-    loadHls();
-
-    return () => {
-      if (hlsRef.current?.destroy) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-      }
-    };
-  }, [loadHls]);
+    startPlayback();
+    return () => cleanupPlayback();
+  }, [startPlayback, cleanupPlayback]);
 
   // ── Send chat message ──
   const handleSendMessage = async () => {
@@ -517,7 +623,7 @@ export default function LiveStreamViewer({
                       <Button
                         onClick={() => {
                           retryCountRef.current = 0;
-                          loadHls();
+                          startPlayback();
                         }}
                         size="sm"
                         className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
