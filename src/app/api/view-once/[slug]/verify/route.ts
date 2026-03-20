@@ -101,7 +101,8 @@ export async function POST(
     }
 
     // Deposit completed — execute the transfer and activate session
-    if (deposit.status === "completed" || deposit.status === "success") {
+    // nTZS returns "minted" when M-Pesa deposit is confirmed and tokens are minted
+    if (deposit.status === "completed" || deposit.status === "success" || deposit.status === "minted") {
       const result = await completeGuestPurchase(purchaseId);
 
       if (!result.success) {
