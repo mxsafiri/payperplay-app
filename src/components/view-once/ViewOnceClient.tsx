@@ -61,17 +61,21 @@ export function ViewOnceClient({
   }, [teaserSeconds]);
 
   // Payment complete — fetch stream URL with retry
-  const handlePaymentComplete = useCallback(async () => {
+  const handlePaymentComplete = useCallback(async (purchaseId?: string) => {
     setStreamError(null);
     const fp = collectDeviceSignals(slug);
 
-    // Retry up to 3 times with short delays (cookie might not be set yet)
+    // Build stream URL — include purchaseId as fallback in case cookie wasn't set
+    const streamBase = `/api/view-once/${slug}/stream`;
+    const streamUrl = purchaseId ? `${streamBase}?pid=${purchaseId}` : streamBase;
+
+    // Retry up to 3 times with short delays
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         if (attempt > 0) {
           await new Promise((r) => setTimeout(r, 1500));
         }
-        const res = await fetch(`/api/view-once/${slug}/stream`, {
+        const res = await fetch(streamUrl, {
           headers: { "x-device-fingerprint": fp },
           credentials: "same-origin",
         });

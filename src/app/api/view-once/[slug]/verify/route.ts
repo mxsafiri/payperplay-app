@@ -1,6 +1,10 @@
 /**
  * POST /api/view-once/[slug]/verify — Poll to check if M-Pesa payment completed.
  * Called by the client after STK push is sent.
+ *
+ * IMPORTANT: Cookies are set directly on the NextResponse object because
+ * `cookies().set()` from next/headers doesn't reliably attach to custom
+ * NextResponse.json() responses in Route Handlers.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
@@ -8,7 +12,21 @@ import { guestPurchases } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getNtzsClient } from "@/lib/ntzs";
 import { completeGuestPurchase } from "@/lib/guest-payment";
-import { activateGuestSession } from "@/lib/guest-session";
+
+const GUEST_COOKIE_NAME = "pp_guest_session";
+const SESSION_DURATION_HOURS = 4;
+
+/** Set the guest session cookie directly on the NextResponse */
+function setSessionCookie(response: NextResponse, purchaseId: string) {
+  response.cookies.set(GUEST_COOKIE_NAME, purchaseId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_DURATION_HOURS * 60 * 60,
+  });
+  return response;
+}
 
 export async function POST(
   req: NextRequest,
@@ -36,8 +54,8 @@ export async function POST(
 
     // If already paid, re-set the cookie (client may have missed first response)
     if (purchase.status === "paid") {
-      await activateGuestSession(purchaseId);
-      return NextResponse.json({ status: "paid", message: "Payment confirmed" });
+      const res = NextResponse.json({ status: "paid", message: "Payment confirmed", purchaseId });
+      return setSessionCookie(res, purchaseId);
     }
 
     // If expired/failed, stop polling
@@ -94,14 +112,14 @@ export async function POST(
         );
       }
 
-      // Activate the guest session cookie
-      await activateGuestSession(purchaseId);
-
-      return NextResponse.json({
+      // Set the session cookie directly on the response
+      const res = NextResponse.json({
         status: "paid",
         message: "Payment confirmed — enjoy the content!",
         transferId: result.transferId,
+        purchaseId,
       });
+      return setSessionCookie(res, purchaseId);
     }
 
     // Unknown status — keep polling

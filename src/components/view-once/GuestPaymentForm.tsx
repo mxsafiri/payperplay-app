@@ -7,7 +7,7 @@ interface GuestPaymentFormProps {
   slug: string;
   priceTzs: number;
   creatorName: string;
-  onPaymentComplete: () => void;
+  onPaymentComplete: (purchaseId?: string) => void;
   onToast?: (message: string, type: "success" | "error") => void;
 }
 
@@ -97,7 +97,8 @@ export function GuestPaymentForm({
               setState("success");
               onToast?.("Payment confirmed! Unlocking video...", "success");
               // Small delay to show success, then load video
-              setTimeout(() => onPaymentComplete(), 1500);
+              // Pass purchaseId so stream can use it as fallback if cookie wasn't set
+              setTimeout(() => onPaymentComplete(verifyData.purchaseId || purchaseId), 1500);
             } else if (verifyData.status === "failed") {
               if (pollRef.current) clearInterval(pollRef.current);
               const errorMsg = verifyData.error || "Payment failed";

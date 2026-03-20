@@ -20,16 +20,23 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    // Get guest session from cookie
+    // Get guest session from cookie (primary) or query param (fallback)
     const cookieStore = await cookies();
-    const purchaseId = cookieStore.get(GUEST_COOKIE_NAME)?.value;
+    const purchaseId =
+      cookieStore.get(GUEST_COOKIE_NAME)?.value ||
+      req.nextUrl.searchParams.get("pid");
 
     if (!purchaseId) {
+      console.error("[stream] No purchaseId found in cookie or query param");
       return NextResponse.json(
         { error: "No valid session — please purchase access first" },
         { status: 401 }
       );
     }
+
+    // If the cookie was missing but we got it from query param, set it now
+    // so subsequent requests work via cookie
+    const cookieWasMissing = !cookieStore.get(GUEST_COOKIE_NAME)?.value;
 
     // Look up the link
     const link = await db.query.viewOnceLinks.findFirst({
@@ -96,11 +103,24 @@ export async function GET(
       expiresInSeconds: STREAM_EXPIRY_SECONDS,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       type: "upload",
       url: streamUrl,
       expiresIn: STREAM_EXPIRY_SECONDS,
     });
+
+    // If the cookie was missing (client used ?pid fallback), set it now
+    if (cookieWasMissing) {
+      response.cookies.set(GUEST_COOKIE_NAME, purchaseId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: STREAM_EXPIRY_SECONDS,
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error("Guest stream error:", error);
     return NextResponse.json({ error: "Failed to load video" }, { status: 500 });
