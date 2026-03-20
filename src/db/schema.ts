@@ -57,6 +57,7 @@ export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'f
 export const walletTxTypeEnum = pgEnum('wallet_tx_type', ['earning', 'withdrawal', 'fee', 'refund', 'adjustment']);
 export const walletTxStatusEnum = pgEnum('wallet_tx_status', ['pending', 'completed', 'failed']);
 export const subStatusEnum = pgEnum('sub_status', ['trial', 'active', 'grace', 'expired']);
+export const guestPurchaseStatusEnum = pgEnum('guest_purchase_status', ['pending', 'paid', 'expired', 'converted']);
 
 // Profiles table (extends neon_auth.user)
 export const profiles = pgTable('profiles', {
@@ -271,6 +272,51 @@ export const platformSubscriptions = pgTable('platform_subscriptions', {
   expiresAtIdx: index('platform_sub_expires_at_idx').on(table.expiresAt),
 }));
 
+// View-once links (shareable URLs for social media distribution)
+export const viewOnceLinks = pgTable('view_once_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull().unique(),
+  contentId: uuid('content_id').notNull().references(() => content.id, { onDelete: 'cascade' }),
+  creatorId: uuid('creator_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  priceTzs: integer('price_tzs').notNull(),
+  teaserSeconds: integer('teaser_seconds').notNull().default(10),
+  maxPurchases: integer('max_purchases'), // NULL = unlimited
+  purchaseCount: integer('purchase_count').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  expiresAt: timestamp('expires_at'), // NULL = never
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: index('view_once_links_slug_idx').on(table.slug),
+  creatorIdIdx: index('view_once_links_creator_id_idx').on(table.creatorId),
+  contentIdIdx: index('view_once_links_content_id_idx').on(table.contentId),
+}));
+
+// Guest purchases (no-account payments via nTZS + M-Pesa)
+export const guestPurchases = pgTable('guest_purchases', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  viewOnceLinkId: uuid('view_once_link_id').notNull().references(() => viewOnceLinks.id, { onDelete: 'cascade' }),
+  phoneNumber: text('phone_number').notNull(),
+  deviceFingerprint: text('device_fingerprint').notNull(),
+  sessionToken: text('session_token').notNull().unique(),
+  ipAddress: text('ip_address'),
+  ntzsGuestUserId: text('ntzs_guest_user_id'), // ephemeral nTZS user for this guest
+  status: guestPurchaseStatusEnum('status').notNull().default('pending'),
+  amountTzs: integer('amount_tzs').notNull(),
+  transferId: text('transfer_id'), // nTZS transfer reference
+  depositId: text('deposit_id'), // nTZS deposit reference (for M-Pesa STK)
+  expiresAt: timestamp('expires_at'), // 4h from payment confirmation
+  watched: boolean('watched').notNull().default(false),
+  convertedUserId: text('converted_user_id'), // auth user ID if they later sign up
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  sessionTokenIdx: index('guest_purchases_session_token_idx').on(table.sessionToken),
+  linkIdIdx: index('guest_purchases_link_id_idx').on(table.viewOnceLinkId),
+  phoneIdx: index('guest_purchases_phone_idx').on(table.phoneNumber),
+  statusIdx: index('guest_purchases_status_idx').on(table.status),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   creatorProfile: one(creatorProfiles, {
@@ -292,6 +338,7 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   followers: many(follows, { relationName: 'creator' }),
   likes: many(likes),
   comments: many(comments),
+  viewOnceLinks: many(viewOnceLinks),
 }));
 
 export const contentRelations = relations(content, ({ one, many }) => ({
@@ -305,6 +352,7 @@ export const contentRelations = relations(content, ({ one, many }) => ({
   likes: many(likes),
   comments: many(comments),
   playlistItems: many(playlistItems),
+  viewOnceLinks: many(viewOnceLinks),
 }));
 
 export const entitlementsRelations = relations(entitlements, ({ one }) => ({
@@ -420,5 +468,24 @@ export const platformSubscriptionsRelations = relations(platformSubscriptions, (
   profile: one(profiles, {
     fields: [platformSubscriptions.profileId],
     references: [profiles.id],
+  }),
+}));
+
+export const viewOnceLinksRelations = relations(viewOnceLinks, ({ one, many }) => ({
+  content: one(content, {
+    fields: [viewOnceLinks.contentId],
+    references: [content.id],
+  }),
+  creator: one(profiles, {
+    fields: [viewOnceLinks.creatorId],
+    references: [profiles.id],
+  }),
+  purchases: many(guestPurchases),
+}));
+
+export const guestPurchasesRelations = relations(guestPurchases, ({ one }) => ({
+  link: one(viewOnceLinks, {
+    fields: [guestPurchases.viewOnceLinkId],
+    references: [viewOnceLinks.id],
   }),
 }));
