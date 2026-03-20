@@ -75,7 +75,6 @@ export const auth = betterAuth({
     // Set cookie on the root domain (.payperplay.xyz) so it works whether
     // the user visits www.payperplay.xyz OR payperplay.xyz — no more logout
     // on subdomain switches. Falls back to undefined in dev (localhost).
-    cookiePrefix: "peep",
     crossSubdomainCookies: {
       enabled: process.env.NODE_ENV === "production",
       domain: ".payperplay.xyz",
