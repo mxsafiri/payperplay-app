@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { resolveAvatarUrl } from "@/lib/avatar";
 import { auth } from "@/lib/auth";
+import { getPlaybackUrls } from "@/lib/cloudflare-stream";
 import LiveStreamViewer from "@/components/livestream/LiveStreamViewer";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -91,8 +92,12 @@ export default async function LiveStreamPage({ params }: Props) {
         status: stream.status,
         priceTzs: stream.priceTzs,
         viewerCount: stream.viewerCount || 0,
-        cfPlaybackUrl: stream.cfPlaybackUrl,
-        cfWebRtcUrl: stream.cfWebRtcUrl,
+        cfPlaybackUrl: stream.cfStreamInputUid
+          ? getPlaybackUrls(stream.cfStreamInputUid).hls
+          : stream.cfPlaybackUrl,
+        cfWebRtcUrl: stream.cfStreamInputUid
+          ? getPlaybackUrls(stream.cfStreamInputUid).webrtc
+          : stream.cfWebRtcUrl,
         startedAt: stream.startedAt?.toISOString() || null,
       }}
       creator={{
