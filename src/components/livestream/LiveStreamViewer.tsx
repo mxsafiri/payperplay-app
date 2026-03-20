@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -14,6 +14,10 @@ import {
   Heart,
   Share2,
   CircleDot,
+  Lock,
+  Phone,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -39,38 +43,53 @@ interface CreatorData {
 
 interface ChatMessage {
   id: string;
-  user: string;
-  text: string;
-  time: string;
-  isSystem?: boolean;
+  displayName: string;
+  avatarUrl: string | null;
+  message: string;
+  isSystem: boolean;
+  isCreator: boolean;
+  createdAt: string;
 }
 
 export default function LiveStreamViewer({
   stream,
   creator,
+  isAuthenticated,
+  hasAccess: initialAccess,
 }: {
   stream: StreamData;
   creator: CreatorData;
+  isAuthenticated?: boolean;
+  hasAccess?: boolean;
 }) {
   const [showChat, setShowChat] = useState(true);
   const [chatMessage, setChatMessage] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "sys-1",
-      user: "PayPerPlay",
-      text: `Welcome to ${creator.displayName || creator.handle}'s stream!`,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isSystem: true,
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [viewerCount, setViewerCount] = useState(stream.viewerCount);
   const [elapsed, setElapsed] = useState("");
+  const [liked, setLiked] = useState(false);
+  const [streamStatus, setStreamStatus] = useState(stream.status);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const lastMessageTime = useRef<string | null>(null);
+  const [sendingChat, setSendingChat] = useState(false);
 
-  // Update elapsed time
+  // Payment gate state
+  const [hasAccess, setHasAccess] = useState(initialAccess ?? stream.priceTzs === 0);
+  const [showPayment, setShowPayment] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [paying, setPaying] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "paid" | "failed">("idle");
+  const [accessId, setAccessId] = useState<string | null>(null);
+
+  const isPaid = stream.priceTzs > 0;
+  const isLive = streamStatus === "live";
+  const isEnded = streamStatus === "ended";
+  const needsPayment = isPaid && !hasAccess && isAuthenticated;
+
+  // ── Elapsed timer ──
   useEffect(() => {
-    if (stream.status !== "live" || !stream.startedAt) return;
+    if (!isLive || !stream.startedAt) return;
     const start = new Date(stream.startedAt).getTime();
     const tick = () => {
       const diff = Date.now() - start;
@@ -86,27 +105,63 @@ export default function LiveStreamViewer({
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [stream.startedAt, stream.status]);
+  }, [stream.startedAt, isLive]);
 
-  // Auto-scroll chat
+  // ── Chat polling ──
+  const fetchMessages = useCallback(async () => {
+    try {
+      const url = lastMessageTime.current
+        ? `/api/livestream/${stream.id}/chat?after=${encodeURIComponent(lastMessageTime.current)}`
+        : `/api/livestream/${stream.id}/chat`;
+
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (data.streamStatus) {
+        setStreamStatus(data.streamStatus);
+      }
+
+      if (data.messages?.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMsgs = data.messages.filter((m: ChatMessage) => !existingIds.has(m.id));
+          if (newMsgs.length === 0) return prev;
+          lastMessageTime.current = newMsgs[newMsgs.length - 1].createdAt;
+          return [...prev, ...newMsgs];
+        });
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [stream.id]);
+
+  useEffect(() => {
+    fetchMessages(); // Initial load
+    const interval = setInterval(fetchMessages, 3000); // Poll every 3s
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
+
+  // ── Auto-scroll chat ──
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Init HLS playback
+  // ── HLS playback ──
   useEffect(() => {
-    if (!stream.cfPlaybackUrl || !videoRef.current) return;
+    if (!stream.cfPlaybackUrl || !videoRef.current || !hasAccess) return;
+    if (!isLive) return;
 
     const video = videoRef.current;
 
-    // Try native HLS (Safari)
+    // Native HLS (Safari)
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = stream.cfPlaybackUrl;
       video.play().catch(() => {});
       return;
     }
 
-    // Use hls.js for other browsers
+    // hls.js
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let hlsInstance: any = null;
     import("hls.js").then(({ default: Hls }) => {
@@ -123,7 +178,6 @@ export default function LiveStreamViewer({
         });
       }
     }).catch(() => {
-      // hls.js not available, try direct
       video.src = stream.cfPlaybackUrl!;
       video.play().catch(() => {});
     });
@@ -131,22 +185,108 @@ export default function LiveStreamViewer({
     return () => {
       if (hlsInstance?.destroy) hlsInstance.destroy();
     };
-  }, [stream.cfPlaybackUrl]);
+  }, [stream.cfPlaybackUrl, hasAccess, isLive]);
 
-  const handleSendMessage = () => {
-    if (!chatMessage.trim()) return;
-    const msg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      user: "You",
-      text: chatMessage.trim(),
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-    setMessages((prev) => [...prev, msg]);
-    setChatMessage("");
+  // ── Send chat message ──
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || sendingChat) return;
+    setSendingChat(true);
+    try {
+      const res = await fetch(`/api/livestream/${stream.id}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: chatMessage.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages((prev) => {
+          const exists = prev.some((m) => m.id === data.message.id);
+          if (exists) return prev;
+          lastMessageTime.current = data.message.createdAt;
+          return [...prev, data.message];
+        });
+        setChatMessage("");
+      }
+    } catch {
+      // fail silently
+    } finally {
+      setSendingChat(false);
+    }
   };
 
-  const isLive = stream.status === "live";
-  const isEnded = stream.status === "ended";
+  // ── Payment handler ──
+  const handlePurchase = async () => {
+    if (!phoneNumber.trim() || paying) return;
+    setPaying(true);
+    setPaymentStatus("pending");
+
+    try {
+      const res = await fetch(`/api/livestream/${stream.id}/access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: phoneNumber.trim() }),
+      });
+      const data = await res.json();
+
+      if (data.hasAccess) {
+        setHasAccess(true);
+        setPaymentStatus("paid");
+        setShowPayment(false);
+        return;
+      }
+
+      if (data.accessId) {
+        setAccessId(data.accessId);
+        // Start polling for payment verification
+        pollPayment(data.accessId);
+      } else {
+        setPaymentStatus("failed");
+        setPaying(false);
+      }
+    } catch {
+      setPaymentStatus("failed");
+      setPaying(false);
+    }
+  };
+
+  const pollPayment = async (aid: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 3 minutes at 3s intervals
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setPaymentStatus("failed");
+        setPaying(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/livestream/${stream.id}/access/verify?accessId=${aid}`);
+        const data = await res.json();
+
+        if (data.status === "paid" || data.hasAccess) {
+          setHasAccess(true);
+          setPaymentStatus("paid");
+          setShowPayment(false);
+          setPaying(false);
+          return;
+        }
+
+        if (data.status === "failed" || data.status === "expired") {
+          setPaymentStatus("failed");
+          setPaying(false);
+          return;
+        }
+      } catch {
+        // keep polling
+      }
+
+      attempts++;
+      setTimeout(poll, 3000);
+    };
+
+    poll();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,6 +304,11 @@ export default function LiveStreamViewer({
           )}
           <h1 className="font-semibold text-sm truncate">{stream.title}</h1>
         </div>
+        {isPaid && hasAccess && (
+          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+            ✓ Access
+          </span>
+        )}
         <button
           onClick={() => setShowChat(!showChat)}
           className={`p-2 rounded-lg transition-colors ${
@@ -179,7 +324,101 @@ export default function LiveStreamViewer({
         <div className="flex-1 flex flex-col">
           {/* Video player */}
           <div className="relative bg-black aspect-video lg:aspect-auto lg:flex-1 flex items-center justify-center">
-            {stream.cfPlaybackUrl && isLive ? (
+            {/* Payment gate overlay */}
+            {needsPayment && !hasAccess && (
+              <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-md flex items-center justify-center">
+                <div className="text-center p-6 max-w-sm">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
+                    <Lock className="w-8 h-8 text-amber-400" />
+                  </div>
+                  <h2 className="text-xl font-bold mb-2">Paid Livestream</h2>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {creator.displayName || creator.handle} is streaming live
+                  </p>
+                  <p className="text-2xl font-bold text-amber-400 mb-6">
+                    {stream.priceTzs.toLocaleString()} TZS
+                  </p>
+
+                  {!showPayment ? (
+                    <Button
+                      onClick={() => setShowPayment(true)}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold hover:from-amber-400 hover:to-orange-400 border-0"
+                    >
+                      Pay to Watch
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          placeholder="0744 123 456"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/10 border border-white/20 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                          disabled={paying}
+                        />
+                      </div>
+
+                      {paymentStatus === "pending" && (
+                        <div className="flex items-center gap-2 text-amber-400 text-sm bg-amber-500/10 rounded-xl p-3">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Check your phone for M-Pesa prompt...
+                        </div>
+                      )}
+
+                      {paymentStatus === "paid" && (
+                        <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 rounded-xl p-3">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Payment confirmed! Unlocking stream...
+                        </div>
+                      )}
+
+                      {paymentStatus === "failed" && (
+                        <div className="text-red-400 text-sm bg-red-500/10 rounded-xl p-3">
+                          Payment failed. Please try again.
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={handlePurchase}
+                        disabled={paying || !phoneNumber.trim()}
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold hover:from-amber-400 hover:to-orange-400 border-0"
+                      >
+                        {paying ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          `Pay ${stream.priceTzs.toLocaleString()} TZS via M-Pesa`
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Not authenticated gate */}
+            {isPaid && !isAuthenticated && (
+              <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-md flex items-center justify-center">
+                <div className="text-center p-6 max-w-sm">
+                  <Lock className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+                  <h2 className="text-xl font-bold mb-2">Paid Livestream</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Sign in to purchase access for {stream.priceTzs.toLocaleString()} TZS
+                  </p>
+                  <Link href="/login">
+                    <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold border-0">
+                      Sign In
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {stream.cfPlaybackUrl && (isLive || streamStatus === "idle") && hasAccess ? (
               <video
                 ref={videoRef}
                 className="w-full h-full object-contain"
@@ -196,7 +435,7 @@ export default function LiveStreamViewer({
                   This livestream has ended. Check back for future streams.
                 </p>
               </div>
-            ) : (
+            ) : !needsPayment ? (
               <div className="text-center p-8">
                 <div className="w-20 h-20 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center mx-auto mb-4">
                   <Radio className="w-8 h-8 text-muted-foreground/50" />
@@ -207,14 +446,14 @@ export default function LiveStreamViewer({
                 </p>
                 <div className="mt-4 flex items-center justify-center gap-2">
                   <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400" />
-                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400 delay-150" />
-                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400 delay-300" />
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400 [animation-delay:150ms]" />
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400 [animation-delay:300ms]" />
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Live overlay info */}
-            {isLive && (
+            {isLive && hasAccess && (
               <div className="absolute top-4 left-4 flex items-center gap-3">
                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white">
                   <Eye className="w-3 h-3" />
@@ -264,10 +503,20 @@ export default function LiveStreamViewer({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-red-400 transition-colors">
-                  <Heart className="w-5 h-5" />
+                <button
+                  onClick={() => setLiked(!liked)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    liked ? "bg-red-500/10 text-red-400" : "hover:bg-white/5 text-muted-foreground hover:text-red-400"
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
                 </button>
-                <button className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                  }}
+                  className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <Share2 className="w-5 h-5" />
                 </button>
               </div>
@@ -290,21 +539,32 @@ export default function LiveStreamViewer({
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {messages.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  {isLive ? "Be the first to say something!" : "Chat will appear here when the stream starts"}
+                </p>
+              )}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`text-sm ${msg.isSystem ? "text-muted-foreground italic" : ""}`}
+                  className={`text-sm ${msg.isSystem ? "text-muted-foreground italic text-xs" : ""}`}
                 >
                   {!msg.isSystem && (
-                    <span className="font-semibold text-amber-400 mr-1.5">
-                      {msg.user}
+                    <span
+                      className={`font-semibold mr-1.5 ${
+                        msg.isCreator ? "text-amber-400" : "text-blue-400"
+                      }`}
+                    >
+                      {msg.displayName}
+                      {msg.isCreator && (
+                        <span className="ml-1 text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.5 rounded uppercase font-bold">
+                          Creator
+                        </span>
+                      )}
                     </span>
                   )}
                   <span className={msg.isSystem ? "" : "text-foreground"}>
-                    {msg.text}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/60 ml-2">
-                    {msg.time}
+                    {msg.message}
                   </span>
                 </div>
               ))}
@@ -312,7 +572,7 @@ export default function LiveStreamViewer({
             </div>
 
             {/* Chat input */}
-            {isLive && (
+            {isLive && isAuthenticated ? (
               <div className="p-3 border-t border-white/10">
                 <div className="flex gap-2">
                   <input
@@ -322,19 +582,27 @@ export default function LiveStreamViewer({
                     onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                     placeholder="Say something..."
                     className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                    disabled={sendingChat}
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={!chatMessage.trim()}
+                    disabled={!chatMessage.trim() || sendingChat}
                     className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-40"
                   >
                     <Send className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            )}
-
-            {!isLive && (
+            ) : isLive && !isAuthenticated ? (
+              <div className="p-3 border-t border-white/10">
+                <Link
+                  href="/login"
+                  className="block text-center text-sm text-amber-400 hover:text-amber-300 bg-amber-500/5 rounded-lg py-2.5"
+                >
+                  Sign in to chat
+                </Link>
+              </div>
+            ) : (
               <div className="p-4 border-t border-white/10 text-center text-xs text-muted-foreground">
                 {isEnded ? "Chat is closed" : "Chat will open when the stream starts"}
               </div>

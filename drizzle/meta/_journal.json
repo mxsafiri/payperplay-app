@@ -22,6 +22,13 @@
       "when": 1774020439092,
       "tag": "0002_wealthy_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774034808161,
+      "tag": "0003_strong_gamma_corps",
+      "breakpoints": true
     }
   ]
 }

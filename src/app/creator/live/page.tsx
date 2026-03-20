@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import BrowserGoLive from "@/components/livestream/BrowserGoLive";
 import {
   Radio,
   Copy,
@@ -17,6 +18,10 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  Camera,
+  Monitor,
+  Calendar,
+  Share2,
 } from "lucide-react";
 
 interface Livestream {
@@ -29,6 +34,7 @@ interface Livestream {
   rtmpUrl: string | null;
   rtmpKey: string | null;
   srtUrl: string | null;
+  webRtcPublishUrl: string | null;
   cfPlaybackUrl: string | null;
   cfWebRtcUrl: string | null;
   viewerCount: number;
@@ -53,6 +59,8 @@ const CATEGORIES = [
   "other",
 ];
 
+type StreamMode = "obs" | "browser";
+
 export default function CreatorLivePage() {
   const [streams, setStreams] = useState<Livestream[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,12 +69,15 @@ export default function CreatorLivePage() {
   const [selectedStream, setSelectedStream] = useState<Livestream | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showKeyFor, setShowKeyFor] = useState<string | null>(null);
+  const [streamMode, setStreamMode] = useState<StreamMode>("browser");
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
 
   // Create form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("entertainment");
   const [priceTzs, setPriceTzs] = useState("0");
+  const [scheduledAt, setScheduledAt] = useState("");
 
   const fetchStreams = useCallback(async () => {
     try {
@@ -89,7 +100,7 @@ export default function CreatorLivePage() {
     const hasActive = streams.some((s) => s.status === "idle" || s.status === "live");
     if (!hasActive) return;
 
-    const interval = setInterval(fetchStreams, 10000); // Every 10s
+    const interval = setInterval(fetchStreams, 10000);
     return () => clearInterval(interval);
   }, [streams, fetchStreams]);
 
@@ -100,7 +111,13 @@ export default function CreatorLivePage() {
       const res = await fetch("/api/creator/livestream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, category, priceTzs }),
+        body: JSON.stringify({
+          title,
+          description,
+          category,
+          priceTzs,
+          scheduledAt: scheduledAt || null,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -111,6 +128,7 @@ export default function CreatorLivePage() {
         setDescription("");
         setCategory("entertainment");
         setPriceTzs("0");
+        setScheduledAt("");
       } else {
         alert(data.error || "Failed to create livestream");
       }
@@ -162,6 +180,13 @@ export default function CreatorLivePage() {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const shareStream = (streamId: string) => {
+    const url = `${window.location.origin}/live/${streamId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedShareLink(true);
+    setTimeout(() => setCopiedShareLink(false), 2000);
   };
 
   const activeStreams = streams.filter((s) => s.status !== "ended");
@@ -251,9 +276,31 @@ export default function CreatorLivePage() {
                 </div>
               </div>
 
+              {/* Schedule */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Schedule (optional)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Leave empty to go live immediately after setup
+                </p>
+              </div>
+
               {parseInt(priceTzs) === 0 && (
                 <p className="text-xs text-emerald-400 flex items-center gap-1">
                   <Eye className="w-3 h-3" /> Free stream — anyone can watch
+                </p>
+              )}
+              {parseInt(priceTzs) > 0 && (
+                <p className="text-xs text-amber-400 flex items-center gap-1">
+                  💰 Paid stream — viewers pay {parseInt(priceTzs).toLocaleString()} TZS via M-Pesa
                 </p>
               )}
             </div>
@@ -278,10 +325,30 @@ export default function CreatorLivePage() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-6">
-        {/* Stream List */}
+      <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+        {/* Main content area */}
         <div className="space-y-6">
-          {/* Active / Idle Streams */}
+          {/* Browser Go Live for selected stream */}
+          {selectedStream && selectedStream.status !== "ended" && streamMode === "browser" && (
+            <div className="border border-white/10 rounded-2xl bg-white/[0.02] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-red-400" />
+                  Browser Stream — {selectedStream.title}
+                </h3>
+                <StreamModeToggle mode={streamMode} onModeChange={setStreamMode} />
+              </div>
+              <BrowserGoLive
+                streamId={selectedStream.id}
+                webRtcPublishUrl={selectedStream.webRtcPublishUrl}
+                status={selectedStream.status}
+                onGoLive={() => handleAction(selectedStream.id, "go-live")}
+                onEndStream={() => handleAction(selectedStream.id, "end")}
+              />
+            </div>
+          )}
+
+          {/* Stream List */}
           {loading ? (
             <div className="flex items-center justify-center py-20 text-muted-foreground">
               <div className="animate-spin w-6 h-6 border-2 border-red-400 border-t-transparent rounded-full" />
@@ -317,6 +384,7 @@ export default function CreatorLivePage() {
                         onClick={() => setSelectedStream(stream)}
                         onAction={handleAction}
                         onDelete={handleDelete}
+                        onShare={shareStream}
                       />
                     ))}
                   </div>
@@ -337,6 +405,7 @@ export default function CreatorLivePage() {
                         onClick={() => setSelectedStream(stream)}
                         onAction={handleAction}
                         onDelete={handleDelete}
+                        onShare={shareStream}
                       />
                     ))}
                   </div>
@@ -378,12 +447,25 @@ export default function CreatorLivePage() {
                     </span>
                   )}
                 </div>
-                {selectedStream.status === "live" && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Eye className="w-3 h-3" />
-                    {selectedStream.viewerCount} viewers
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedStream.status === "live" && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      {selectedStream.viewerCount} viewers
+                    </span>
+                  )}
+                  <button
+                    onClick={() => shareStream(selectedStream.id)}
+                    className="p-1.5 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Copy viewer link"
+                  >
+                    {copiedShareLink ? (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Share2 className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <h3 className="text-base font-bold mt-2 truncate">{selectedStream.title}</h3>
               <p className="text-xs text-muted-foreground mt-0.5 capitalize">
@@ -391,16 +473,27 @@ export default function CreatorLivePage() {
                 {selectedStream.priceTzs > 0
                   ? `${selectedStream.priceTzs.toLocaleString()} TZS`
                   : "Free"}
+                {selectedStream.scheduledAt && (
+                  <>
+                    {" "}&middot;{" "}
+                    <Calendar className="w-3 h-3 inline" />{" "}
+                    {new Date(selectedStream.scheduledAt).toLocaleDateString(undefined, {
+                      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                    })}
+                  </>
+                )}
               </p>
             </div>
 
-            {/* Stream Setup Info */}
-            {selectedStream.status !== "ended" && (
+            {/* OBS Setup Info */}
+            {selectedStream.status !== "ended" && streamMode === "obs" && (
               <div className="p-5 space-y-4">
+                <StreamModeToggle mode={streamMode} onModeChange={setStreamMode} />
+
                 <div>
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <Settings className="w-3.5 h-3.5" />
-                    Stream Setup (OBS / Streamlabs)
+                    Stream Setup
                   </h4>
                   <div className="space-y-3">
                     {/* RTMP URL */}
@@ -434,7 +527,7 @@ export default function CreatorLivePage() {
                       <div className="flex items-center gap-2">
                         <code className="flex-1 text-xs bg-black/30 px-3 py-2 rounded-lg border border-white/5 truncate font-mono">
                           {showKeyFor === selectedStream.id
-                            ? selectedStream.rtmpKey || "Not configured — add CF_STREAM_API_TOKEN"
+                            ? selectedStream.rtmpKey || "Not configured"
                             : "••••••••••••••••••••"}
                         </code>
                         <button
@@ -505,7 +598,7 @@ export default function CreatorLivePage() {
 
                 {/* Instructions */}
                 <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                  <h4 className="text-xs font-semibold mb-2">How to go live:</h4>
+                  <h4 className="text-xs font-semibold mb-2">How to go live with OBS:</h4>
                   <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
                     <li>Open <strong>OBS Studio</strong> or <strong>Streamlabs</strong></li>
                     <li>Go to Settings → Stream</li>
@@ -515,6 +608,32 @@ export default function CreatorLivePage() {
                     <li>Come back here and click <strong>&quot;Go Live&quot;</strong></li>
                   </ol>
                 </div>
+              </div>
+            )}
+
+            {/* Browser mode sidebar info */}
+            {selectedStream.status !== "ended" && streamMode === "browser" && (
+              <div className="p-5 space-y-4">
+                <StreamModeToggle mode={streamMode} onModeChange={setStreamMode} />
+
+                <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+                  <h4 className="text-xs font-semibold mb-2">Browser Streaming</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Stream directly from your browser — no extra software needed. Choose camera for face-to-face streams, or screen share for tutorials and presentations.
+                  </p>
+                </div>
+
+                {selectedStream.cfPlaybackUrl && (
+                  <a
+                    href={`/live/${selectedStream.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-[var(--ds-radius-md)] text-sm font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Viewer Link
+                  </a>
+                )}
               </div>
             )}
 
@@ -568,12 +687,14 @@ function StreamCard({
   onClick,
   onAction,
   onDelete,
+  onShare,
 }: {
   stream: Livestream;
   selected: boolean;
   onClick: () => void;
   onAction: (id: string, action: "go-live" | "end") => void;
   onDelete: (id: string) => void;
+  onShare: (id: string) => void;
 }) {
   return (
     <div
@@ -605,11 +726,24 @@ function StreamCard({
             <span className="text-xs text-muted-foreground capitalize">
               {stream.category}
             </span>
+            {stream.priceTzs > 0 && (
+              <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                {stream.priceTzs.toLocaleString()} TZS
+              </span>
+            )}
           </div>
           <h3 className="font-semibold text-sm truncate">{stream.title}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {stream.priceTzs > 0 ? `${stream.priceTzs.toLocaleString()} TZS` : "Free"} &middot;{" "}
-            {formatTime(stream.createdAt)}
+            {stream.scheduledAt && stream.status === "idle" ? (
+              <>
+                <Calendar className="w-3 h-3 inline mr-1" />
+                Scheduled: {new Date(stream.scheduledAt).toLocaleDateString(undefined, {
+                  month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                })}
+              </>
+            ) : (
+              formatTime(stream.createdAt)
+            )}
           </p>
         </div>
 
@@ -620,6 +754,16 @@ function StreamCard({
               {stream.viewerCount}
             </span>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare(stream.id);
+            }}
+            className="p-1.5 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+            title="Copy viewer link"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
           {stream.status === "ended" && (
             <button
               onClick={(e) => {
@@ -647,6 +791,41 @@ function formatTime(dateStr: string) {
   const diffHr = Math.floor(diffMin / 60);
   if (diffHr < 24) return `${diffHr}h ago`;
   return d.toLocaleDateString();
+}
+
+function StreamModeToggle({
+  mode,
+  onModeChange,
+}: {
+  mode: StreamMode;
+  onModeChange: (mode: StreamMode) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+      <button
+        onClick={() => onModeChange("browser")}
+        className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+          mode === "browser"
+            ? "bg-red-500/20 text-red-400"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Camera className="w-3 h-3 inline mr-1" />
+        Browser
+      </button>
+      <button
+        onClick={() => onModeChange("obs")}
+        className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+          mode === "obs"
+            ? "bg-red-500/20 text-red-400"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Monitor className="w-3 h-3 inline mr-1" />
+        OBS
+      </button>
+    </div>
+  );
 }
 
 function formatDuration(ms: number) {

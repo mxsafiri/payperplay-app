@@ -75,8 +75,10 @@ export async function POST(req: NextRequest) {
     rtmpUrl: string;
     rtmpKey: string;
     srtUrl: string;
+    webRtcPublishUrl: string;
     playbackHls: string;
     playbackWebRtc: string;
+    playbackIframe: string;
   } | null = null;
 
   // Try to create Cloudflare Stream live input
@@ -105,6 +107,7 @@ export async function POST(req: NextRequest) {
     rtmpUrl: cfData?.rtmpUrl || "rtmps://live.cloudflare.com:443/live/",
     rtmpKey: cfData?.rtmpKey || null,
     srtUrl: cfData?.srtUrl || null,
+    webRtcPublishUrl: cfData?.webRtcPublishUrl || null,
     cfPlaybackUrl: cfData?.playbackHls || null,
     cfWebRtcUrl: cfData?.playbackWebRtc || null,
     recordingEnabled: true,

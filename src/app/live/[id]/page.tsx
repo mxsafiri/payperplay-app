@@ -1,9 +1,11 @@
 import { db } from "@/db";
-import { livestreams, profiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { livestreams, profiles, livestreamAccess } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { resolveAvatarUrl } from "@/lib/avatar";
+import { auth } from "@/lib/auth";
 import LiveStreamViewer from "@/components/livestream/LiveStreamViewer";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 
 interface Props {
@@ -48,6 +50,37 @@ export default async function LiveStreamPage({ params }: Props) {
     ? await resolveAvatarUrl(stream.creator.avatarUrl)
     : null;
 
+  // Check authentication and access
+  let isAuthenticated = false;
+  let hasAccess = stream.priceTzs === 0; // Free streams are always accessible
+
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (session?.user) {
+    isAuthenticated = true;
+
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.userId, session.user.id),
+      columns: { id: true },
+    });
+
+    if (profile) {
+      // Creator always has access
+      if (profile.id === stream.creatorId) {
+        hasAccess = true;
+      } else if (stream.priceTzs > 0) {
+        // Check for paid access
+        const access = await db.query.livestreamAccess.findFirst({
+          where: and(
+            eq(livestreamAccess.livestreamId, id),
+            eq(livestreamAccess.userId, profile.id),
+            eq(livestreamAccess.status, "paid")
+          ),
+        });
+        hasAccess = !!access;
+      }
+    }
+  }
+
   return (
     <LiveStreamViewer
       stream={{
@@ -68,6 +101,8 @@ export default async function LiveStreamPage({ params }: Props) {
         displayName: stream.creator.displayName,
         avatarUrl,
       }}
+      isAuthenticated={isAuthenticated}
+      hasAccess={hasAccess}
     />
   );
 }

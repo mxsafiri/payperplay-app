@@ -334,6 +334,7 @@ export const livestreams = pgTable('livestreams', {
   rtmpUrl: text('rtmp_url'), // RTMP ingest URL (rtmps://live.cloudflare.com:443/live/)
   rtmpKey: text('rtmp_key'), // Stream key for OBS
   srtUrl: text('srt_url'), // SRT ingest URL (alternative to RTMP)
+  webRtcPublishUrl: text('webrtc_publish_url'), // WHIP URL for browser-based streaming
   // Playback
   cfPlaybackUrl: text('cf_playback_url'), // HLS playback URL
   cfWebRtcUrl: text('cf_webrtc_url'), // WebRTC low-latency playback URL
@@ -531,7 +532,65 @@ export const guestPurchasesRelations = relations(guestPurchases, ({ one }) => ({
   }),
 }));
 
-export const livestreamsRelations = relations(livestreams, ({ one }) => ({
+// Live chat messages
+export const liveChatMessages = pgTable('live_chat_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  livestreamId: uuid('livestream_id').notNull().references(() => livestreams.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }), // null = anonymous/system
+  displayName: text('display_name').notNull(),
+  avatarUrl: text('avatar_url'),
+  message: text('message').notNull(),
+  isSystem: boolean('is_system').notNull().default(false),
+  isCreator: boolean('is_creator').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  livestreamIdx: index('live_chat_livestream_idx').on(table.livestreamId),
+  createdAtIdx: index('live_chat_created_at_idx').on(table.createdAt),
+}));
+
+export const liveChatMessagesRelations = relations(liveChatMessages, ({ one }) => ({
+  livestream: one(livestreams, {
+    fields: [liveChatMessages.livestreamId],
+    references: [livestreams.id],
+  }),
+  user: one(profiles, {
+    fields: [liveChatMessages.userId],
+    references: [profiles.id],
+  }),
+}));
+
+// Livestream access purchases (paid livestreams)
+export const livestreamAccess = pgTable('livestream_access', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  livestreamId: uuid('livestream_id').notNull().references(() => livestreams.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }),
+  phoneNumber: text('phone_number'),
+  amountTzs: integer('amount_tzs').notNull(),
+  status: guestPurchaseStatusEnum('status').notNull().default('pending'),
+  depositId: text('deposit_id'),
+  transferId: text('transfer_id'),
+  ntzsGuestUserId: text('ntzs_guest_user_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  livestreamIdx: index('livestream_access_livestream_idx').on(table.livestreamId),
+  userIdx: index('livestream_access_user_idx').on(table.userId),
+}));
+
+export const livestreamAccessRelations = relations(livestreamAccess, ({ one }) => ({
+  livestream: one(livestreams, {
+    fields: [livestreamAccess.livestreamId],
+    references: [livestreams.id],
+  }),
+  user: one(profiles, {
+    fields: [livestreamAccess.userId],
+    references: [profiles.id],
+  }),
+}));
+
+export const livestreamsRelations = relations(livestreams, ({ one, many }) => ({
+  chatMessages: many(liveChatMessages),
+  accessPurchases: many(livestreamAccess),
   creator: one(profiles, {
     fields: [livestreams.creatorId],
     references: [profiles.id],
