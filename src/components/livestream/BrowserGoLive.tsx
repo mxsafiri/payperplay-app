@@ -153,10 +153,34 @@ export default function BrowserGoLive({
 
       peerConnectionRef.current = pc;
 
-      // Add tracks from media stream
-      mediaStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, mediaStreamRef.current!);
-      });
+      // Add tracks via transceivers so we can set codec preferences
+      const videoTrack = mediaStreamRef.current.getVideoTracks()[0];
+      const audioTrack = mediaStreamRef.current.getAudioTracks()[0];
+
+      if (videoTrack) {
+        const videoTransceiver = pc.addTransceiver(videoTrack, {
+          direction: "sendonly",
+          streams: [mediaStreamRef.current],
+        });
+
+        // Force H.264 codec (required by Cloudflare Stream)
+        if (videoTransceiver.setCodecPreferences) {
+          const codecs = RTCRtpSender.getCapabilities("video")?.codecs || [];
+          const h264Codecs = codecs.filter(
+            (c) => c.mimeType.toLowerCase() === "video/h264"
+          );
+          if (h264Codecs.length > 0) {
+            videoTransceiver.setCodecPreferences([...h264Codecs, ...codecs.filter(c => c.mimeType.toLowerCase() !== "video/h264")]);
+          }
+        }
+      }
+
+      if (audioTrack) {
+        pc.addTransceiver(audioTrack, {
+          direction: "sendonly",
+          streams: [mediaStreamRef.current],
+        });
+      }
 
       // Create offer
       const offer = await pc.createOffer();
