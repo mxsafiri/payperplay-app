@@ -373,8 +373,8 @@ export default function BrowserGoLive({
             </button>
           </div>
 
-          <div>
-            {!isStreaming ? (
+          <div className="flex items-center gap-2">
+            {!isStreaming && status !== "live" ? (
               <Button
                 onClick={startStreaming}
                 disabled={isConnecting || status === "ended" || !webRtcPublishUrl}
@@ -395,7 +395,13 @@ export default function BrowserGoLive({
             ) : (
               <Button
                 variant="destructive"
-                onClick={stopStreaming}
+                onClick={() => {
+                  if (isStreaming) {
+                    stopStreaming();
+                  } else {
+                    onEndStream();
+                  }
+                }}
                 className="px-6"
               >
                 <StopCircle className="w-4 h-4" />

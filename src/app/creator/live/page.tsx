@@ -623,6 +623,17 @@ export default function CreatorLivePage() {
                   </p>
                 </div>
 
+                {selectedStream.status === "live" && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleAction(selectedStream.id, "end")}
+                    className="w-full"
+                  >
+                    <StopCircle className="w-4 h-4" />
+                    End Stream
+                  </Button>
+                )}
+
                 {selectedStream.cfPlaybackUrl && (
                   <a
                     href={`/live/${selectedStream.id}`}
@@ -749,10 +760,23 @@ function StreamCard({
 
         <div className="flex items-center gap-1 ml-3">
           {stream.status === "live" && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              {stream.viewerCount}
-            </span>
+            <>
+              <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1">
+                <Eye className="w-3 h-3" />
+                {stream.viewerCount}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAction(stream.id, "end");
+                }}
+                className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-semibold transition-colors flex items-center gap-1"
+                title="End stream"
+              >
+                <StopCircle className="w-3.5 h-3.5" />
+                End
+              </button>
+            </>
           )}
           <button
             onClick={(e) => {
