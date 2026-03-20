@@ -38,7 +38,7 @@ export async function GET() {
         id: link.id,
         slug: link.slug,
         priceTzs: link.priceTzs,
-        teaserDurationSec: link.teaserDurationSec,
+        teaserDurationSec: link.teaserSeconds,
         isActive: link.isActive,
         maxPurchases: link.maxPurchases,
         purchaseCount: link.purchaseCount,
