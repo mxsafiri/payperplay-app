@@ -147,45 +147,114 @@ export default function LiveStreamViewer({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── HLS playback ──
-  useEffect(() => {
-    if (!stream.cfPlaybackUrl || !videoRef.current || !hasAccess) return;
-    if (!isLive) return;
+  // ── HLS playback with retry ──
+  const [videoLoading, setVideoLoading] = useState(true);
+  const [videoError, setVideoError] = useState(false);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hlsRef = useRef<any>(null);
+
+  const loadHls = useCallback(() => {
+    if (!stream.cfPlaybackUrl || !videoRef.current || !hasAccess || !isLive) return;
 
     const video = videoRef.current;
+    setVideoLoading(true);
+    setVideoError(false);
 
-    // Native HLS (Safari)
+    const onPlaying = () => {
+      setVideoLoading(false);
+      setVideoError(false);
+      retryCountRef.current = 0;
+    };
+
+    const scheduleRetry = () => {
+      retryCountRef.current++;
+      if (retryCountRef.current > 30) {
+        // After ~2 minutes of retrying, show error
+        setVideoLoading(false);
+        setVideoError(true);
+        return;
+      }
+      // Retry every 3-4 seconds
+      const delay = Math.min(3000 + retryCountRef.current * 500, 5000);
+      retryTimerRef.current = setTimeout(() => {
+        loadHls();
+      }, delay);
+    };
+
+    // Cleanup previous
+    if (hlsRef.current?.destroy) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    video.removeEventListener("playing", onPlaying);
+
+    // Native HLS (Safari/iOS)
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = stream.cfPlaybackUrl;
-      video.play().catch(() => {});
+      video.addEventListener("playing", onPlaying);
+      video.addEventListener("error", () => scheduleRetry(), { once: true });
+      video.play().catch(() => scheduleRetry());
       return;
     }
 
-    // hls.js
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let hlsInstance: any = null;
+    // hls.js for other browsers
     import("hls.js").then(({ default: Hls }) => {
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls({
-          lowLatencyMode: true,
-          liveSyncDurationCount: 3,
-          liveMaxLatencyDurationCount: 6,
-        });
-        hlsInstance.loadSource(stream.cfPlaybackUrl!);
-        hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => {});
-        });
+      if (!Hls.isSupported()) {
+        // Fallback: try native
+        video.src = stream.cfPlaybackUrl!;
+        video.addEventListener("playing", onPlaying);
+        video.play().catch(() => scheduleRetry());
+        return;
       }
+
+      const hls = new Hls({
+        lowLatencyMode: true,
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 6,
+        manifestLoadingRetryDelay: 2000,
+        manifestLoadingMaxRetry: 10,
+        levelLoadingRetryDelay: 2000,
+        levelLoadingMaxRetry: 10,
+      });
+
+      hlsRef.current = hls;
+
+      hls.loadSource(stream.cfPlaybackUrl!);
+      hls.attachMedia(video);
+
+      video.addEventListener("playing", onPlaying);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+      });
+
+      hls.on(Hls.Events.ERROR, (_event: string, data: { fatal: boolean; type: string }) => {
+        if (data.fatal) {
+          hls.destroy();
+          hlsRef.current = null;
+          scheduleRetry();
+        }
+      });
     }).catch(() => {
-      video.src = stream.cfPlaybackUrl!;
-      video.play().catch(() => {});
+      scheduleRetry();
     });
+  }, [stream.cfPlaybackUrl, hasAccess, isLive]);
+
+  useEffect(() => {
+    loadHls();
 
     return () => {
-      if (hlsInstance?.destroy) hlsInstance.destroy();
+      if (hlsRef.current?.destroy) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+      }
     };
-  }, [stream.cfPlaybackUrl, hasAccess, isLive]);
+  }, [loadHls]);
 
   // ── Send chat message ──
   const handleSendMessage = async () => {
@@ -419,14 +488,47 @@ export default function LiveStreamViewer({
             )}
 
             {stream.cfPlaybackUrl && (isLive || streamStatus === "idle") && hasAccess ? (
-              <video
-                ref={videoRef}
-                className="w-full h-full object-contain"
-                autoPlay
-                playsInline
-                muted
-                controls
-              />
+              <div className="relative w-full h-full">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-contain"
+                  autoPlay
+                  playsInline
+                  muted
+                  controls
+                />
+                {/* Loading overlay */}
+                {isLive && videoLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+                    <div className="text-center">
+                      <Loader2 className="w-10 h-10 text-red-400 animate-spin mx-auto mb-3" />
+                      <p className="text-sm text-white font-medium">Connecting to live stream...</p>
+                      <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
+                    </div>
+                  </div>
+                )}
+                {/* Error overlay with retry */}
+                {isLive && videoError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+                    <div className="text-center">
+                      <Radio className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+                      <p className="text-sm text-white font-medium mb-1">Stream not available yet</p>
+                      <p className="text-xs text-muted-foreground mb-4">The stream may still be starting up</p>
+                      <Button
+                        onClick={() => {
+                          retryCountRef.current = 0;
+                          loadHls();
+                        }}
+                        size="sm"
+                        className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                      >
+                        <Radio className="w-4 h-4" />
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : isEnded ? (
               <div className="text-center p-8">
                 <Radio className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
