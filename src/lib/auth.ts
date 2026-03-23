@@ -79,5 +79,12 @@ export const auth = betterAuth({
       enabled: process.env.NODE_ENV === "production",
       domain: ".payperplay.xyz",
     },
+    // Force session cookie to always have maxAge so it survives tab/browser close.
+    // Covers all flows: email login, signup, Google, GitHub.
+    cookieOptions: {
+      sessionToken: {
+        maxAge: 60 * 60 * 24 * 30, // 30 days — matches session.expiresIn
+      },
+    },
   },
 });

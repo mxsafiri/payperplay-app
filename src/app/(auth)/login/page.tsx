@@ -24,6 +24,7 @@ export default function LoginPage() {
       const result = await signIn.email({
         email,
         password,
+        rememberMe: true,
       });
 
       if (result.error) {
