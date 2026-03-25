@@ -4,12 +4,14 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, ArrowLeft, FileVideo, X, ImageIcon, Shield, ExternalLink } from "lucide-react";
+import { Upload, ArrowLeft, FileVideo, X, ImageIcon, Shield, ExternalLink, Music, Video } from "lucide-react";
 import Link from "next/link";
 import { useToast, Toaster } from "@/components/ui/toast";
 
 const MAX_VIDEO_SIZE_MB = 500;
+const MAX_AUDIO_SIZE_MB = 200;
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const ALLOWED_AUDIO_TYPES = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac", "audio/x-flac", "audio/aac", "audio/ogg", "audio/mp4", "audio/x-m4a"];
 const ALLOWED_THUMB_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_THUMB_SIZE_MB = 5;
 
@@ -25,7 +27,14 @@ const CATEGORIES = [
   "Other",
 ];
 
+const MUSIC_GENRES = [
+  "Afrobeat", "Bongo Flava", "Gospel", "Hip-Hop", "R&B",
+  "Pop", "Jazz", "Reggae", "Dancehall", "Traditional", "Other",
+];
+
 const PRESET_PRICES = [500, 1000, 2000];
+
+type UploadMode = "video" | "music";
 
 export default function CreateContentPage() {
   const router = useRouter();
@@ -33,26 +42,46 @@ export default function CreateContentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Mode toggle
+  const [mode, setMode] = useState<UploadMode>("video");
+
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Music");
-  const contentType = "upload" as const;
   const [priceType, setPriceType] = useState<"free" | "preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState(500);
   const [customPrice, setCustomPrice] = useState("");
 
+  // Music metadata
+  const [genre, setGenre] = useState("");
+  const [explicit, setExplicit] = useState(false);
+
   // Upload state
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<"" | "uploading" | "done" | "error">("");
   const [videoDragging, setVideoDragging] = useState(false);
+  const [audioDragging, setAudioDragging] = useState(false);
   const [thumbDragging, setThumbDragging] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
   const [contentDeclaration, setContentDeclaration] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
+
+  const handleModeSwitch = (newMode: UploadMode) => {
+    setMode(newMode);
+    setVideoFile(null);
+    setAudioFile(null);
+    setThumbnailFile(null);
+    setUploadStatus("");
+    setUploadProgress(0);
+    setError("");
+    if (newMode === "music") setCategory("Music");
+  };
 
   const extractVideoThumbnail = (file: File): Promise<File | null> => {
     return new Promise((resolve) => {
@@ -155,6 +184,22 @@ export default function CreateContentPage() {
     setUploadStatus("");
   };
 
+  const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
+      setError("Unsupported format. Use MP3, WAV, FLAC, AAC, or M4A.");
+      return;
+    }
+    if (file.size > MAX_AUDIO_SIZE_MB * 1024 * 1024) {
+      setError(`Audio file too large. Maximum ${MAX_AUDIO_SIZE_MB}MB.`);
+      return;
+    }
+    setError("");
+    setAudioFile(file);
+    setUploadStatus("");
+  };
+
   const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -170,17 +215,11 @@ export default function CreateContentPage() {
     setThumbnailFile(file);
   };
 
-  const uploadFileToR2 = async (file: File, mediaType: "video" | "thumbnail"): Promise<string> => {
-    // 1. Get presigned URL
+  const uploadFileToR2 = async (file: File, mediaType: "video" | "audio" | "thumbnail"): Promise<string> => {
     const presignRes = await fetch("/api/upload/presign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        mediaType,
-      }),
+      body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size, mediaType }),
     });
     if (!presignRes.ok) {
       const data = await presignRes.json();
@@ -188,20 +227,16 @@ export default function CreateContentPage() {
     }
     const { uploadUrl, storageKey } = await presignRes.json();
 
-    // 2. Upload directly to R2 with progress
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", uploadUrl);
       xhr.setRequestHeader("Content-Type", file.type);
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && mediaType === "video") {
+        if (e.lengthComputable && (mediaType === "video" || mediaType === "audio")) {
           setUploadProgress(Math.round((e.loaded / e.total) * 100));
         }
       };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error(`Upload failed with status ${xhr.status}`));
-      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed with status ${xhr.status}`)));
       xhr.onerror = () => reject(new Error("Upload failed"));
       xhr.send(file);
     });
@@ -215,18 +250,10 @@ export default function CreateContentPage() {
     setLoading(true);
 
     try {
-      // Validate
-      if (!title.trim()) {
-        setError("Title is required");
-        setLoading(false);
-        return;
-      }
+      if (!title.trim()) { setError("Title is required"); setLoading(false); return; }
 
-      if (!videoFile) {
-        setError("Please select a video file");
-        setLoading(false);
-        return;
-      }
+      if (mode === "video" && !videoFile) { setError("Please select a video file"); setLoading(false); return; }
+      if (mode === "music" && !audioFile) { setError("Please select an audio file"); setLoading(false); return; }
 
       if (!contentDeclaration && !isDraft) {
         setError("You must confirm content ownership before publishing");
@@ -235,66 +262,60 @@ export default function CreateContentPage() {
       }
 
       const priceTzs = priceType === "free" ? 0 : priceType === "preset" ? selectedPreset : parseInt(customPrice);
+      if (priceTzs > 0 && priceTzs < 500) { setError("Paid content must be at least 500 TZS"); setLoading(false); return; }
+      if (priceType === "custom" && (isNaN(priceTzs) || priceTzs < 0)) { setError("Please enter a valid price"); setLoading(false); return; }
 
-      if (priceTzs > 0 && priceTzs < 500) {
-        setError("Paid content must be at least 500 TZS");
-        setLoading(false);
-        return;
-      }
+      setUploadStatus("uploading");
+      setUploadProgress(0);
 
-      if (priceType === "custom" && (isNaN(priceTzs) || priceTzs < 0)) {
-        setError("Please enter a valid price");
-        setLoading(false);
-        return;
-      }
-
-      // Upload files to R2 if direct upload
       let videoStorageKey: string | null = null;
+      let audioStorageKey: string | null = null;
       let thumbnailStorageKey: string | null = null;
 
-      if (videoFile) {
-        setUploadStatus("uploading");
-        setUploadProgress(0);
-        try {
+      try {
+        if (mode === "video" && videoFile) {
           videoStorageKey = await uploadFileToR2(videoFile, "video");
-
-          // Upload creator's thumbnail or auto-generate one from the video
           let thumbToUpload = thumbnailFile;
           if (!thumbToUpload) {
             setUploadProgress(50);
             const autoThumb = await extractVideoThumbnail(videoFile);
-            if (!autoThumb) {
-              throw new Error("Failed to generate thumbnail from video. Please upload a custom thumbnail.");
-            }
+            if (!autoThumb) throw new Error("Failed to generate thumbnail. Please upload a custom thumbnail.");
             thumbToUpload = autoThumb;
           }
           thumbnailStorageKey = await uploadFileToR2(thumbToUpload, "thumbnail");
-
-          setUploadStatus("done");
-        } catch (err: unknown) {
-          setUploadStatus("error");
-          const msg = err instanceof Error ? err.message : "Upload failed";
-          setError(msg);
-          toast(msg, "error");
-          setLoading(false);
-          return;
+        } else if (mode === "music" && audioFile) {
+          audioStorageKey = await uploadFileToR2(audioFile, "audio");
+          if (thumbnailFile) {
+            thumbnailStorageKey = await uploadFileToR2(thumbnailFile, "thumbnail");
+          }
         }
+        setUploadStatus("done");
+      } catch (err: unknown) {
+        setUploadStatus("error");
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        setError(msg);
+        toast(msg, "error");
+        setLoading(false);
+        return;
       }
 
-      // Create content
       const response = await fetch("/api/creator/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
           description,
-          category,
-          contentType,
+          category: mode === "music" ? "Music" : category,
+          contentType: mode === "music" ? "audio_upload" : "upload",
           youtubeUrl: null,
           videoStorageKey,
+          audioStorageKey,
           thumbnailStorageKey,
           priceTzs,
           status: isDraft ? "draft" : "published",
+          // music metadata
+          genre: mode === "music" ? genre || null : undefined,
+          explicit: mode === "music" ? explicit : undefined,
         }),
       });
 
@@ -306,8 +327,8 @@ export default function CreateContentPage() {
       }
 
       const data = await response.json();
-      toast(isDraft ? "Draft saved successfully!" : "Content published!", "success");
-      setTimeout(() => router.push(`/creator/content/${data.content.id}/edit`), 1200);
+      toast(isDraft ? "Draft saved successfully!" : `${mode === "music" ? "Track" : "Content"} published!`, "success");
+      setTimeout(() => router.push(`/creator/content`), 1200);
     } catch (err) {
       setError("An unexpected error occurred");
       toast("An unexpected error occurred", "error");
@@ -318,28 +339,20 @@ export default function CreateContentPage() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       <Toaster toasts={toasts} dismiss={dismiss} />
-      {/* Subtle grid background */}
       <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(128,128,128,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.05) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
       <div className="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
       <div className="fixed bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none" />
 
-      {/* Header — frosted glass */}
+      {/* Header */}
       <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-xl bg-background/60">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => router.back()}
-              disabled={loading}
-              className="hover:bg-white/10"
-            >
+            <Button variant="ghost" onClick={() => router.back()} disabled={loading} className="hover:bg-white/10">
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Create New Content</h1>
-              <p className="text-sm text-muted-foreground">
-                Share exclusive content with your fans
-              </p>
+              <p className="text-sm text-muted-foreground">Share exclusive content with your fans</p>
             </div>
           </div>
         </div>
@@ -354,86 +367,142 @@ export default function CreateContentPage() {
               </div>
             )}
 
-            {/* Upload */}
+            {/* ── Content Type Toggle ── */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+              <div className="relative p-6">
+                <h2 className="text-lg font-semibold tracking-tight mb-3">Content Type</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleModeSwitch("video")}
+                    disabled={loading}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                      mode === "video"
+                        ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                        : "border-white/10 hover:border-white/20 hover:bg-white/5 text-muted-foreground"
+                    }`}
+                  >
+                    <Video className="w-5 h-5 flex-shrink-0" />
+                    <div className="text-left">
+                      <p className="text-sm font-semibold">Video</p>
+                      <p className="text-xs opacity-70">MP4, WebM, MOV</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeSwitch("music")}
+                    disabled={loading}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                      mode === "music"
+                        ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                        : "border-white/10 hover:border-white/20 hover:bg-white/5 text-muted-foreground"
+                    }`}
+                  >
+                    <Music className="w-5 h-5 flex-shrink-0" />
+                    <div className="text-left">
+                      <p className="text-sm font-semibold">Music</p>
+                      <p className="text-xs opacity-70">MP3, WAV, FLAC, AAC</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Upload Section ── */}
             <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
               <div className="relative p-6 space-y-5">
-                <h2 className="text-lg font-semibold tracking-tight">Upload Video</h2>
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {mode === "music" ? "Upload Track" : "Upload Video"}
+                </h2>
 
-                {/* Video drop zone */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Video File *</label>
-                  <input
-                    ref={videoInputRef}
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
-                    onChange={handleVideoSelect}
-                    className="hidden"
-                  />
-                  {videoFile ? (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
-                      <FileVideo className="w-8 h-8 text-blue-400 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{videoFile.name}</p>
-                        <p className="text-xs text-muted-foreground">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+                {/* Primary file drop zone */}
+                {mode === "video" ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Video File *</label>
+                    <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideoSelect} className="hidden" />
+                    {videoFile ? (
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                        <FileVideo className="w-8 h-8 text-blue-400 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{videoFile.name}</p>
+                          <p className="text-xs text-muted-foreground">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+                        </div>
+                        <button type="button" onClick={() => { setVideoFile(null); setUploadStatus(""); }} className="p-1 rounded hover:bg-white/10"><X className="w-4 h-4" /></button>
                       </div>
-                      <button type="button" onClick={() => { setVideoFile(null); setUploadStatus(""); }} className="p-1 rounded hover:bg-white/10">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onDragOver={(e) => { e.preventDefault(); setVideoDragging(true); }}
-                      onDragLeave={() => setVideoDragging(false)}
-                      onDrop={(e) => { e.preventDefault(); setVideoDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleVideoSelect({ target: { files: e.dataTransfer.files } } as any); }}
-                      onClick={() => videoInputRef.current?.click()}
-                      className={`w-full p-10 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${
-                        videoDragging ? "border-amber-500 bg-amber-500/10" : "border-white/15 hover:border-white/30 hover:bg-white/5"
-                      }`}
-                    >
-                      <Upload className={`w-10 h-10 mx-auto mb-3 transition-colors ${videoDragging ? "text-amber-400" : "text-muted-foreground"}`} />
-                      <p className="text-sm font-medium">{videoDragging ? "Drop to upload" : "Drag & drop or click to select"}</p>
-                      <p className="text-xs text-muted-foreground mt-1">MP4, WebM, or MOV · Max {MAX_VIDEO_SIZE_MB}MB</p>
-                    </div>
-                  )}
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setVideoDragging(true); }}
+                        onDragLeave={() => setVideoDragging(false)}
+                        onDrop={(e) => { e.preventDefault(); setVideoDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleVideoSelect({ target: { files: e.dataTransfer.files } } as any); }}
+                        onClick={() => videoInputRef.current?.click()}
+                        className={`w-full p-10 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${videoDragging ? "border-amber-500 bg-amber-500/10" : "border-white/15 hover:border-white/30 hover:bg-white/5"}`}
+                      >
+                        <Upload className={`w-10 h-10 mx-auto mb-3 transition-colors ${videoDragging ? "text-amber-400" : "text-muted-foreground"}`} />
+                        <p className="text-sm font-medium">{videoDragging ? "Drop to upload" : "Drag & drop or click to select"}</p>
+                        <p className="text-xs text-muted-foreground mt-1">MP4, WebM, or MOV · Max {MAX_VIDEO_SIZE_MB}MB</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Audio File *</label>
+                    <input ref={audioInputRef} type="file" accept="audio/*" onChange={handleAudioSelect} className="hidden" />
+                    {audioFile ? (
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                        <Music className="w-8 h-8 text-amber-400 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{audioFile.name}</p>
+                          <p className="text-xs text-muted-foreground">{(audioFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+                        </div>
+                        <button type="button" onClick={() => { setAudioFile(null); setUploadStatus(""); }} className="p-1 rounded hover:bg-white/10"><X className="w-4 h-4" /></button>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setAudioDragging(true); }}
+                        onDragLeave={() => setAudioDragging(false)}
+                        onDrop={(e) => { e.preventDefault(); setAudioDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleAudioSelect({ target: { files: e.dataTransfer.files } } as any); }}
+                        onClick={() => audioInputRef.current?.click()}
+                        className={`w-full p-10 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${audioDragging ? "border-amber-500 bg-amber-500/10" : "border-white/15 hover:border-white/30 hover:bg-white/5"}`}
+                      >
+                        <Music className={`w-10 h-10 mx-auto mb-3 transition-colors ${audioDragging ? "text-amber-400" : "text-muted-foreground"}`} />
+                        <p className="text-sm font-medium">{audioDragging ? "Drop to upload" : "Drag & drop or click to select"}</p>
+                        <p className="text-xs text-muted-foreground mt-1">MP3, WAV, FLAC, AAC, M4A · Max {MAX_AUDIO_SIZE_MB}MB</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {uploadStatus === "uploading" && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Uploading...</span>
-                        <span>{uploadProgress}%</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
+                {/* Upload progress */}
+                {uploadStatus === "uploading" && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
                     </div>
-                  )}
-                </div>
+                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                  </div>
+                )}
 
-                {/* Thumbnail drop zone */}
+                {/* Cover / Thumbnail */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Thumbnail{" "}
-                    <span className="text-muted-foreground font-normal">(optional — auto-generated if not set)</span>
+                    {mode === "music" ? "Cover Art" : "Thumbnail"}{" "}
+                    <span className="text-muted-foreground font-normal">
+                      {mode === "music" ? "(optional)" : "(optional — auto-generated if not set)"}
+                    </span>
                   </label>
-                  <input
-                    ref={thumbInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleThumbnailSelect}
-                    className="hidden"
-                  />
+                  <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleThumbnailSelect} className="hidden" />
                   {thumbnailFile ? (
                     <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5">
                       <ImageIcon className="w-6 h-6 text-green-400 shrink-0" />
                       <p className="text-sm truncate flex-1">{thumbnailFile.name}</p>
-                      <button type="button" onClick={() => setThumbnailFile(null)} className="p-1 rounded hover:bg-white/10">
-                        <X className="w-4 h-4" />
-                      </button>
+                      <button type="button" onClick={() => setThumbnailFile(null)} className="p-1 rounded hover:bg-white/10"><X className="w-4 h-4" /></button>
                     </div>
                   ) : (
                     <div
@@ -441,9 +510,7 @@ export default function CreateContentPage() {
                       onDragLeave={() => setThumbDragging(false)}
                       onDrop={(e) => { e.preventDefault(); setThumbDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleThumbnailSelect({ target: { files: e.dataTransfer.files } } as any); }}
                       onClick={() => thumbInputRef.current?.click()}
-                      className={`w-full p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${
-                        thumbDragging ? "border-green-500 bg-green-500/10" : "border-white/10 hover:border-white/20 hover:bg-white/5"
-                      }`}
+                      className={`w-full p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer select-none text-center ${thumbDragging ? "border-green-500 bg-green-500/10" : "border-white/10 hover:border-white/20 hover:bg-white/5"}`}
                     >
                       <ImageIcon className={`w-7 h-7 mx-auto mb-2 transition-colors ${thumbDragging ? "text-green-400" : "text-muted-foreground"}`} />
                       <p className="text-xs text-muted-foreground">{thumbDragging ? "Drop image here" : "Drag & drop or click · JPEG, PNG, WebP · Max 5MB"}</p>
@@ -453,177 +520,151 @@ export default function CreateContentPage() {
               </div>
             </div>
 
-            {/* Basic Info */}
+            {/* ── Basic Info ── */}
             <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
               <div className="relative p-6">
                 <h2 className="text-lg font-semibold tracking-tight mb-4">Basic Information</h2>
                 <div className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="title" className="text-sm font-medium">
-                    Title *
-                  </label>
-                  <Input
-                    id="title"
-                    placeholder="Give your content a catchy title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <label htmlFor="title" className="text-sm font-medium">
+                      {mode === "music" ? "Song Title *" : "Title *"}
+                    </label>
+                    <Input
+                      id="title"
+                      placeholder={mode === "music" ? "Name your track" : "Give your content a catchy title"}
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    placeholder="Describe what fans will get..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    disabled={loading}
-                    className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <label htmlFor="description" className="text-sm font-medium">Description</label>
+                    <textarea
+                      id="description"
+                      placeholder={mode === "music" ? "Tell fans about this track..." : "Describe what fans will get..."}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      disabled={loading}
+                      className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="category" className="text-sm font-medium">
-                    Category *
-                  </label>
-                  <select
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Genre + Explicit — music only */}
+                  {mode === "music" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="genre" className="text-sm font-medium">Genre</label>
+                        <select
+                          id="genre"
+                          value={genre}
+                          onChange={(e) => setGenre(e.target.value)}
+                          disabled={loading}
+                          className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Select genre</option>
+                          {MUSIC_GENRES.map((g) => <option key={g} value={g.toLowerCase()}>{g}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Explicit Content</label>
+                        <label className="flex items-center gap-3 cursor-pointer mt-2.5">
+                          <input
+                            type="checkbox"
+                            checked={explicit}
+                            onChange={(e) => setExplicit(e.target.checked)}
+                            disabled={loading}
+                            className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-muted-foreground">Mark as explicit</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Category — video only */}
+                  {mode === "video" && (
+                    <div className="space-y-2">
+                      <label htmlFor="category" className="text-sm font-medium">Category *</label>
+                      <select
+                        id="category"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        disabled={loading}
+                        className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Pricing */}
+            {/* ── Pricing ── */}
             <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
               <div className="relative p-6">
                 <h2 className="text-lg font-semibold tracking-tight mb-1">Pricing</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Set how much fans pay to access this content
+                  Set how much fans pay to {mode === "music" ? "stream this track" : "access this content"}
                 </p>
                 <div className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="free"
-                      checked={priceType === "free"}
-                      onChange={() => setPriceType("free")}
-                      disabled={loading}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="free" className="text-sm font-medium">
-                      Free
-                    </label>
-                    <span className="text-xs text-green-500 font-medium">Recommended for growing your audience</span>
-                  </div>
-
-                  {priceType === "free" && (
-                    <div className="ml-6 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                      <p className="text-sm text-green-600 dark:text-green-400">
-                        Anyone can watch this content for free. Great for building your fanbase!
-                      </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input type="radio" id="free" checked={priceType === "free"} onChange={() => setPriceType("free")} disabled={loading} className="w-4 h-4" />
+                      <label htmlFor="free" className="text-sm font-medium">Free</label>
+                      <span className="text-xs text-green-500 font-medium">Recommended for growing your audience</span>
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="preset"
-                      checked={priceType === "preset"}
-                      onChange={() => setPriceType("preset")}
-                      disabled={loading}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="preset" className="text-sm font-medium">
-                      Preset Prices
-                    </label>
-                  </div>
-
-                  {priceType === "preset" && (
-                    <div className="grid grid-cols-3 gap-3 ml-6">
-                      {PRESET_PRICES.map((price) => (
-                        <button
-                          key={price}
-                          type="button"
-                          onClick={() => setSelectedPreset(price)}
-                          disabled={loading}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPreset === price
-                              ? "border-primary bg-primary/10"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <div className="text-2xl font-bold">{price}</div>
-                          <div className="text-xs text-muted-foreground">TZS</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="custom"
-                      checked={priceType === "custom"}
-                      onChange={() => setPriceType("custom")}
-                      disabled={loading}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="custom" className="text-sm font-medium">
-                      Custom Price
-                    </label>
-                  </div>
-
-                  {priceType === "custom" && (
-                    <div className="ml-6">
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          placeholder="Enter amount"
-                          value={customPrice}
-                          onChange={(e) => setCustomPrice(e.target.value)}
-                          disabled={loading}
-                          min="500"
-                          step="100"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                          TZS
-                        </span>
+                    {priceType === "free" && (
+                      <div className="ml-6 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <p className="text-sm text-green-600 dark:text-green-400">Anyone can {mode === "music" ? "listen" : "watch"} for free. Great for building your fanbase!</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Minimum for paid content: 500 TZS
-                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input type="radio" id="preset" checked={priceType === "preset"} onChange={() => setPriceType("preset")} disabled={loading} className="w-4 h-4" />
+                      <label htmlFor="preset" className="text-sm font-medium">Preset Prices</label>
                     </div>
-                  )}
-                </div>
+                    {priceType === "preset" && (
+                      <div className="grid grid-cols-3 gap-3 ml-6">
+                        {PRESET_PRICES.map((price) => (
+                          <button key={price} type="button" onClick={() => setSelectedPreset(price)} disabled={loading}
+                            className={`p-4 rounded-lg border-2 transition-all ${selectedPreset === price ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
+                            <div className="text-2xl font-bold">{price}</div>
+                            <div className="text-xs text-muted-foreground">TZS</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input type="radio" id="custom" checked={priceType === "custom"} onChange={() => setPriceType("custom")} disabled={loading} className="w-4 h-4" />
+                      <label htmlFor="custom" className="text-sm font-medium">Custom Price</label>
+                    </div>
+                    {priceType === "custom" && (
+                      <div className="ml-6">
+                        <div className="relative">
+                          <Input type="number" placeholder="Enter amount" value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} disabled={loading} min="500" step="100" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">TZS</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Minimum for paid content: 500 TZS</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Content Declaration */}
+            {/* ── Content Declaration ── */}
             <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 backdrop-blur-md bg-amber-500/[0.03]">
               <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none" />
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
@@ -632,10 +673,7 @@ export default function CreateContentPage() {
                   <Shield className="w-5 h-5 text-amber-400" />
                   Content Ownership Declaration
                 </h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  You must confirm ownership before publishing
-                </p>
-
+                <p className="text-sm text-muted-foreground mb-4">You must confirm ownership before publishing</p>
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
@@ -645,19 +683,11 @@ export default function CreateContentPage() {
                     className="mt-0.5 w-5 h-5 rounded border-2 border-amber-500/40 bg-transparent text-amber-500 focus:ring-amber-500/50 accent-amber-500 cursor-pointer"
                   />
                   <span className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
-                    I declare that I am the <strong className="text-foreground">original creator</strong> of this content or hold all necessary
-                    rights and licenses to distribute it. I confirm this content does not infringe on any
-                    third-party copyrights, trademarks, or intellectual property rights. I understand that
-                    I am <strong className="text-foreground">solely responsible</strong> for the content I publish and any claims arising from it.
+                    I declare that I am the <strong className="text-foreground">original creator</strong> of this content or hold all necessary rights and licenses to distribute it. I confirm this content does not infringe on any third-party copyrights, trademarks, or intellectual property rights. I understand that I am <strong className="text-foreground">solely responsible</strong> for the content I publish and any claims arising from it.
                   </span>
                 </label>
-
                 <div className="mt-3 flex items-center gap-1">
-                  <Link
-                    href="/creator/content-policy"
-                    target="_blank"
-                    className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 flex items-center gap-1"
-                  >
+                  <Link href="/creator/content-policy" target="_blank" className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 flex items-center gap-1">
                     Read full Content Policy & Creator Agreement
                     <ExternalLink className="w-3 h-3" />
                   </Link>
@@ -665,16 +695,9 @@ export default function CreateContentPage() {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* ── Actions ── */}
             <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>Cancel</Button>
               <div className="flex items-center gap-3">
                 <Button
                   type="button"
@@ -683,10 +706,7 @@ export default function CreateContentPage() {
                   onClick={(e) => {
                     e.preventDefault();
                     setIsDraft(true);
-                    setTimeout(() => {
-                      const form = e.currentTarget.closest("form");
-                      if (form) form.requestSubmit();
-                    }, 0);
+                    setTimeout(() => { const form = e.currentTarget.closest("form"); if (form) form.requestSubmit(); }, 0);
                   }}
                 >
                   {loading && isDraft ? "Saving Draft..." : "Save as Draft"}
@@ -698,7 +718,7 @@ export default function CreateContentPage() {
                   className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   title={!contentDeclaration ? "Confirm content ownership to publish" : undefined}
                 >
-                  {loading && !isDraft ? "Publishing..." : "Publish Content"}
+                  {loading && !isDraft ? "Publishing..." : mode === "music" ? "Publish Track" : "Publish Content"}
                 </Button>
               </div>
             </div>

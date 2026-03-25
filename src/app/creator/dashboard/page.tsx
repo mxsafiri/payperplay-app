@@ -323,8 +323,7 @@ export default function CreatorDashboard() {
                 <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
                 <div className="space-y-1.5">
                   {[
-                    { label: "Create New Content", href: "/creator/content/new", icon: Plus, color: "text-amber-400" },
-                    { label: "Music Studio", href: "/creator/music", icon: Music, color: "text-pink-400" },
+                    { label: "Upload Content / Music", href: "/creator/content/new", icon: Plus, color: "text-amber-400" },
                     { label: "View Analytics", href: "/creator/analytics", icon: BarChart3, color: "text-purple-400" },
                     { label: "Manage Playlists", href: "/creator/playlists", icon: Film, color: "text-blue-400" },
                     { label: "Share & Earn Links", href: "/creator/share-earn", icon: Share2, color: "text-green-400" },

@@ -8,6 +8,7 @@ import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   Film,
+  Music,
   Plus,
   Pencil,
   Eye,
@@ -154,7 +155,7 @@ export default function ContentManagement() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Content</h1>
-              <p className="text-sm text-muted-foreground">{content.length} videos · Manage your library</p>
+              <p className="text-sm text-muted-foreground">{content.length} item{content.length !== 1 ? "s" : ""} · Manage your library</p>
             </div>
             <Link href="/creator/content/new">
               <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20">
@@ -272,6 +273,8 @@ export default function ContentManagement() {
                         <div className="relative w-[120px] h-[68px] rounded-lg overflow-hidden flex-shrink-0 bg-white/5 flex items-center justify-center">
                           {thumb ? (
                             <Image src={thumb} alt={item.title} fill className="object-cover" sizes="120px" />
+                          ) : item.contentType === "audio_upload" ? (
+                            <Music className="w-5 h-5 text-amber-400" />
                           ) : (
                             <Film className="w-5 h-5 text-muted-foreground" />
                           )}
@@ -281,7 +284,12 @@ export default function ContentManagement() {
                           {item.description && (
                             <p className="text-[11px] text-muted-foreground truncate mt-0.5 max-w-[300px]">{item.description}</p>
                           )}
-                          <span className="text-[10px] text-muted-foreground/60 mt-1 inline-block">{item.category}</span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {item.contentType === "audio_upload" && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium"><Music className="w-2.5 h-2.5" />Music</span>
+                            )}
+                            <span className="text-[10px] text-muted-foreground/60">{item.category}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -364,6 +372,8 @@ export default function ContentManagement() {
                       <div className="relative w-28 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 flex items-center justify-center">
                         {thumb ? (
                           <Image src={thumb} alt={item.title} fill className="object-cover" sizes="112px" />
+                        ) : item.contentType === "audio_upload" ? (
+                          <Music className="w-5 h-5 text-amber-400" />
                         ) : (
                           <Film className="w-5 h-5 text-muted-foreground" />
                         )}
