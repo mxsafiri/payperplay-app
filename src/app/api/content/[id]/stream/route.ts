@@ -68,21 +68,22 @@ export async function GET(
       }
     }
 
-    // Find the video media entry with a storage key
-    const videoMedia = contentItem.media?.find(
-      (m) => m.mediaType === "video" && m.storageKey
+    // Find the primary media — video or audio
+    const isAudio = contentItem.contentType === "audio_upload";
+    const primaryMedia = contentItem.media?.find(
+      (m) => m.mediaType === (isAudio ? "audio" : "video") && m.storageKey
     );
 
-    if (!videoMedia?.storageKey) {
+    if (!primaryMedia?.storageKey) {
       return NextResponse.json(
-        { error: "No uploaded video found for this content" },
+        { error: `No uploaded ${isAudio ? "audio" : "video"} found for this content` },
         { status: 404 }
       );
     }
 
     // Generate a short-lived presigned URL for streaming
     const streamUrl = await getPresignedReadUrl({
-      key: videoMedia.storageKey,
+      key: primaryMedia.storageKey,
       expiresInSeconds: 3600, // 1 hour
     });
 
@@ -101,6 +102,7 @@ export async function GET(
     return NextResponse.json({
       streamUrl,
       thumbnailUrl,
+      contentType: isAudio ? "audio" : "video",
       preview: isPreview && !hasFullAccess,
       expiresIn: 3600,
     });

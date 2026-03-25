@@ -52,7 +52,8 @@ export const authVerification = pgTable('verification', {
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['creator', 'fan']);
 export const contentStatusEnum = pgEnum('content_status', ['draft', 'published', 'archived']);
-export const contentTypeEnum = pgEnum('content_type', ['youtube_preview', 'upload']);
+export const contentTypeEnum = pgEnum('content_type', ['youtube_preview', 'upload', 'audio_upload']);
+export const musicReleaseTypeEnum = pgEnum('music_release_type', ['playlist', 'album', 'ep', 'single']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded']);
 export const walletTxTypeEnum = pgEnum('wallet_tx_type', ['earning', 'withdrawal', 'fee', 'refund', 'adjustment']);
 export const walletTxStatusEnum = pgEnum('wallet_tx_status', ['pending', 'completed', 'failed']);
@@ -201,6 +202,7 @@ export const playlists = pgTable('playlists', {
   description: text('description'),
   category: text('category'),
   coverImageUrl: text('cover_image_url'),
+  releaseType: musicReleaseTypeEnum('release_type').notNull().default('playlist'),
   isPublished: boolean('is_published').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -318,6 +320,28 @@ export const guestPurchases = pgTable('guest_purchases', {
   statusIdx: index('guest_purchases_status_idx').on(table.status),
 }));
 
+// Music metadata (extra fields for audio_upload content)
+export const musicMetadata = pgTable('music_metadata', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contentId: uuid('content_id').notNull().unique().references(() => content.id, { onDelete: 'cascade' }),
+  albumId: uuid('album_id').references(() => playlists.id, { onDelete: 'set null' }), // which album/EP this track belongs to
+  trackNumber: integer('track_number'), // position within the album
+  genre: text('genre'), // e.g. 'afrobeat', 'bongo', 'gospel', 'hip-hop'
+  mood: text('mood'), // e.g. 'chill', 'energetic', 'romantic'
+  bpm: integer('bpm'),
+  explicit: boolean('explicit').notNull().default(false),
+  releaseDate: timestamp('release_date'),
+  artistCredits: text('artist_credits'), // JSON: [{name, role}]
+  lyrics: text('lyrics'),
+  durationSeconds: integer('duration_seconds'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  contentIdIdx: index('music_metadata_content_id_idx').on(table.contentId),
+  albumIdIdx: index('music_metadata_album_id_idx').on(table.albumId),
+  genreIdx: index('music_metadata_genre_idx').on(table.genre),
+}));
+
 // Livestreams (Cloudflare Stream Live)
 export const livestreams = pgTable('livestreams', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -383,6 +407,17 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   livestreams: many(livestreams),
 }));
 
+export const musicMetadataRelations = relations(musicMetadata, ({ one }) => ({
+  content: one(content, {
+    fields: [musicMetadata.contentId],
+    references: [content.id],
+  }),
+  album: one(playlists, {
+    fields: [musicMetadata.albumId],
+    references: [playlists.id],
+  }),
+}));
+
 export const contentRelations = relations(content, ({ one, many }) => ({
   creator: one(profiles, {
     fields: [content.creatorId],
@@ -395,6 +430,10 @@ export const contentRelations = relations(content, ({ one, many }) => ({
   comments: many(comments),
   playlistItems: many(playlistItems),
   viewOnceLinks: many(viewOnceLinks),
+  musicMetadata: one(musicMetadata, {
+    fields: [content.id],
+    references: [musicMetadata.contentId],
+  }),
 }));
 
 export const entitlementsRelations = relations(entitlements, ({ one }) => ({
@@ -493,6 +532,7 @@ export const playlistsRelations = relations(playlists, ({ one, many }) => ({
     references: [profiles.id],
   }),
   items: many(playlistItems),
+  tracks: many(musicMetadata),
 }));
 
 export const playlistItemsRelations = relations(playlistItems, ({ one }) => ({

@@ -24,6 +24,7 @@ import {
   X,
   Share2,
   BarChart3,
+  Music,
 } from "lucide-react";
 
 interface CreatorStats {
@@ -323,6 +324,7 @@ export default function CreatorDashboard() {
                 <div className="space-y-1.5">
                   {[
                     { label: "Create New Content", href: "/creator/content/new", icon: Plus, color: "text-amber-400" },
+                    { label: "Music Studio", href: "/creator/music", icon: Music, color: "text-pink-400" },
                     { label: "View Analytics", href: "/creator/analytics", icon: BarChart3, color: "text-purple-400" },
                     { label: "Manage Playlists", href: "/creator/playlists", icon: Film, color: "text-blue-400" },
                     { label: "Share & Earn Links", href: "/creator/share-earn", icon: Share2, color: "text-green-400" },

@@ -14,6 +14,7 @@ import {
   Crown,
   LayoutDashboard,
   Wallet,
+  Music,
 } from "lucide-react";
 
 type Profile = {
@@ -22,10 +23,10 @@ type Profile = {
 
 const FAN_NAV_ITEMS = [
   { href: "/feed", label: "Discover", icon: LayoutGrid },
+  { href: "/music", label: "Music", icon: Music },
   { href: "/library", label: "Library", icon: Library },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/profile", label: "Profile", icon: User },
-  { href: "/subscribe", label: "Sub", icon: Crown },
 ];
 
 export function FanShell({
@@ -70,7 +71,7 @@ export function FanShell({
 
   const mobileNavItems = profile?.role === "creator"
     ? [...FAN_NAV_ITEMS, { href: "/creator/dashboard", label: "Studio", icon: LayoutDashboard }]
-    : FAN_NAV_ITEMS;
+    : [...FAN_NAV_ITEMS, { href: "/subscribe", label: "Sub", icon: Crown }];
 
   return (
     <div className="min-h-screen relative overflow-hidden">

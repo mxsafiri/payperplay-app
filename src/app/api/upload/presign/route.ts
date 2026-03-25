@@ -8,8 +8,10 @@ import {
   MAX_VIDEO_SIZE_BYTES,
   MAX_THUMBNAIL_SIZE_BYTES,
   MAX_AVATAR_SIZE_BYTES,
+  MAX_AUDIO_SIZE_BYTES,
   ALLOWED_VIDEO_TYPES,
   ALLOWED_THUMBNAIL_TYPES,
+  ALLOWED_AUDIO_TYPES,
 } from "@/lib/storage/r2";
 
 export async function POST(req: NextRequest) {
@@ -39,8 +41,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Only creators can upload video/thumbnail
-    if ((mediaType === "video" || mediaType === "thumbnail") && profile.role !== "creator") {
+    // Only creators can upload media content
+    if ((mediaType === "video" || mediaType === "thumbnail" || mediaType === "audio") && profile.role !== "creator") {
       return NextResponse.json({ error: "Not a creator" }, { status: 403 });
     }
 
@@ -84,9 +86,22 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+    } else if (mediaType === "audio") {
+      if (!ALLOWED_AUDIO_TYPES.includes(fileType)) {
+        return NextResponse.json(
+          { error: `Unsupported audio format. Allowed: MP3, WAV, FLAC, AAC, OGG, M4A` },
+          { status: 400 }
+        );
+      }
+      if (fileSize > MAX_AUDIO_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: `Audio file too large. Maximum size: ${MAX_AUDIO_SIZE_BYTES / (1024 * 1024)}MB` },
+          { status: 400 }
+        );
+      }
     } else {
       return NextResponse.json(
-        { error: "mediaType must be 'video', 'thumbnail', or 'avatar'" },
+        { error: "mediaType must be 'video', 'thumbnail', 'audio', or 'avatar'" },
         { status: 400 }
       );
     }

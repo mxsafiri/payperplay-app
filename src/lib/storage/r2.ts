@@ -106,7 +106,7 @@ export async function deleteFile(key: string): Promise<void> {
 export function generateStorageKey(params: {
   creatorId: string;
   fileName: string;
-  mediaType: "video" | "thumbnail" | "avatar";
+  mediaType: "video" | "thumbnail" | "avatar" | "audio";
 }): string {
   const timestamp = Date.now();
   const sanitized = params.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -117,6 +117,7 @@ export function generateStorageKey(params: {
 export const MAX_VIDEO_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB
 export const MAX_THUMBNAIL_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+export const MAX_AUDIO_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 
 export const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
@@ -128,4 +129,16 @@ export const ALLOWED_THUMBNAIL_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
+];
+
+export const ALLOWED_AUDIO_TYPES = [
+  "audio/mpeg",       // .mp3
+  "audio/wav",        // .wav
+  "audio/x-wav",      // .wav alt
+  "audio/flac",       // .flac
+  "audio/x-flac",     // .flac alt
+  "audio/aac",        // .aac
+  "audio/ogg",        // .ogg
+  "audio/mp4",        // .m4a
+  "audio/x-m4a",      // .m4a alt
 ];

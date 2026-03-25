@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayPerPlay App Store Screenshots</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .controls {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .btn-group { display: flex; gap: 1rem; margin-top: 1rem; }
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .btn-primary { background: #111827; color: white; }
+    .btn-secondary { background: #8B5CF6; color: white; }
+    .btn-primary:hover { background: #1f2937; }
+    .btn-secondary:hover { background: #7c3aed; }
+    .preview {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    .screenshot {
+      width: 1179px;
+      height: 2556px;
+      background: #0a0a0a;
+      color: #fafafa;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      transform: scale(0.25);
+      transform-origin: top center;
+    }
+    .content {
+      padding: 120px 80px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .emoji { font-size: 120px; margin-bottom: 60px; line-height: 1; }
+    .title {
+      font-size: 96px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 32px;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 56px;
+      font-weight: 600;
+      color: #8B5CF6;
+      margin-bottom: 48px;
+      line-height: 1.2;
+    }
+    .description {
+      font-size: 52px;
+      line-height: 1.4;
+      opacity: 0.8;
+      margin-bottom: 80px;
+    }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      margin-bottom: 32px;
+      background: #18181b;
+      padding: 40px 48px;
+      border-radius: 24px;
+    }
+    .dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #8B5CF6;
+      flex-shrink: 0;
+    }
+    .feature-text { font-size: 48px; font-weight: 500; }
+    .watermark {
+      position: absolute;
+      bottom: 80px;
+      right: 80px;
+      font-size: 44px;
+      font-weight: 700;
+      opacity: 0.4;
+    }
+    .info {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-top: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .info h3 { margin-bottom: 0.75rem; }
+    .info p { color: #666; line-height: 1.6; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="controls">
+      <h1>PayPerPlay App Store Screenshots Generator</h1>
+      <p style="color: #666; margin-bottom: 1rem;">Click buttons below to download each screenshot as PNG (1179x2556px - iPhone 6.1")</p>
+      <div class="btn-group">
+        <button class="btn-primary" onclick="downloadScreenshot(0)">Download Screenshot 1: Hero</button>
+        <button class="btn-primary" onclick="downloadScreenshot(1)">Download Screenshot 2: Discover</button>
+        <button class="btn-primary" onclick="downloadScreenshot(2)">Download Screenshot 3: Creator</button>
+        <button class="btn-primary" onclick="downloadScreenshot(3)">Download Screenshot 4: Wallet</button>
+        <button class="btn-primary" onclick="downloadScreenshot(4)">Download Screenshot 5: Community</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn-secondary" onclick="downloadAll()">Download All 5 Screenshots</button>
+      </div>
+    </div>
+
+    <div class="preview">
+      <div id="canvas" class="screenshot">
+        <div class="content">
+          <div>
+            <div class="emoji" id="emoji">🚀</div>
+            <h2 class="title" id="title">Create, Post & Get Paid</h2>
+            <p class="subtitle" id="subtitle">Tanzania's creator-first platform</p>
+            <p class="description" id="description">Join 80K+ creators earning from premium content</p>
+          </div>
+          <div id="features">
+            <div class="feature"><div class="dot"></div><span class="feature-text">Pay-per-play content</span></div>
+            <div class="feature"><div class="dot"></div><span class="feature-text">Instant mobile money</span></div>
+            <div class="feature"><div class="dot"></div><span class="feature-text">No subscriptions needed</span></div>
+          </div>
+          <div class="watermark">PayPerPlay</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info">
+      <h3>Instructions</h3>
+      <p>1. Click any "Download Screenshot" button to save that specific screenshot</p>
+      <p>2. Or click "Download All 5 Screenshots" to get all images at once</p>
+      <p>3. Screenshots are generated at 1179x2556px (iPhone 6.1" size)</p>
+      <p>4. Upload these directly to App Store Connect</p>
+      <p>5. For other sizes (6.5", 6.9"), the images will auto-scale in App Store Connect</p>
+    </div>
+  </div>
+
+  <script>
+    const screenshots = [
+      {
+        emoji: '🚀',
+        title: 'Create, Post & Get Paid',
+        subtitle: "Tanzania's creator-first platform",
+        description: 'Join 80K+ creators earning from premium content',
+        features: ['Pay-per-play content', 'Instant mobile money', 'No subscriptions needed']
+      },
+      {
+        emoji: '🎬',
+        title: 'Discover Premium Content',
+        subtitle: 'Gaming • Music • Education • Art',
+        description: 'Unlock exclusive videos, tutorials, and behind-the-scenes content from your favorite creators',
+        features: ['8 content categories', '300-1000 TZS per play', '200K+ active users']
+      },
+      {
+        emoji: '💰',
+        title: 'Built for Creators',
+        subtitle: 'Upload. Price. Earn.',
+        description: 'Set your own prices, track earnings in real-time, and get paid directly to mobile money',
+        features: ['Creator dashboard', 'Real-time analytics', 'Direct payouts']
+      },
+      {
+        emoji: '💳',
+        title: 'Your Creator Wallet',
+        subtitle: 'Track every shilling',
+        description: 'Clear earnings view, instant tips, and seamless mobile money withdrawals',
+        features: ['Earnings tracking', 'One-tap tips', 'Mobile money ready']
+      },
+      {
+        emoji: '🔥',
+        title: 'Join the Movement',
+        subtitle: "Tanzania's creator economy",
+        description: 'Follow creators, build your library, and support local talent with micro-payments',
+        features: ['Follow & engage', 'Personal library', 'Leaderboards']
+      }
+    ];
+
+    function updateScreenshot(index) {
+      const data = screenshots[index];
+      document.getElementById('emoji').textContent = data.emoji;
+      document.getElementById('title').textContent = data.title;
+      document.getElementById('subtitle').textContent = data.subtitle;
+      document.getElementById('description').textContent = data.description;
+      
+      const featuresDiv = document.getElementById('features');
+      featuresDiv.innerHTML = data.features.map(f => 
+        `<div class="feature"><div class="dot"></div><span class="feature-text">${f}</span></div>`
+      ).join('');
+    }
+
+    async function downloadScreenshot(index) {
+      updateScreenshot(index);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const canvas = document.getElementById('canvas');
+      const htmlCanvas = await html2canvas(canvas, {
+        width: 1179,
+        height: 2556,
+        scale: 1,
+        backgroundColor: '#0a0a0a'
+      });
+      
+      const link = document.createElement('a');
+      link.download = `payperplay-screenshot-${index + 1}.png`;
+      link.href = htmlCanvas.toDataURL('image/png');
+      link.click();
+    }
+
+    async function downloadAll() {
+      for (let i = 0; i < 5; i++) {
+        await downloadScreenshot(i);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      alert('All 5 screenshots downloaded!');
+    }
+
+    updateScreenshot(0);
+  </script>
+</body>
+</html>
