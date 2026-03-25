@@ -6,8 +6,8 @@ import Image from "next/image";
 import { FanShell } from "@/components/fan/FanShell";
 import { useAudioPlayer, type PlayerTrack } from "@/components/music/AudioPlayerContext";
 import {
-  Music, Play, Disc3, Clock, ExternalLink,
-  Loader2, ChevronRight, Mic2,
+  Music, Play, Disc3, Lock,
+  Loader2, Mic2,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -65,70 +65,120 @@ function songToTrack(song: Song): PlayerTrack {
   };
 }
 
+// ── Equalizer bars ─────────────────────────────────────────────────────────
+function EqBars() {
+  return (
+    <span className="inline-flex items-end gap-[2px] h-3.5 w-3.5">
+      {[70, 100, 45, 85].map((h, i) => (
+        <span key={i} className="w-[2.5px] rounded-sm bg-amber-400"
+          style={{ height: `${h}%`, animation: "eqBounce 0.6s ease-in-out infinite alternate", animationDelay: `${i * 120}ms` }} />
+      ))}
+    </span>
+  );
+}
+
 // ── Song Row ───────────────────────────────────────────────────────────────
 function SongRow({ song, index, allSongs }: { song: Song; index: number; allSongs: Song[] }) {
   const { play, track, isPlaying } = useAudioPlayer();
   const thumb = song.media.find((m) => m.mediaType === "thumbnail");
   const coverSrc = mediaUrl(thumb?.storageKey, thumb?.url);
   const isActive = track?.id === song.id;
+  const isPaid = song.priceTzs > 0;
 
   const handlePlay = () => {
-    if (song.priceTzs > 0) {
-      window.location.href = `/content/${song.id}`;
-      return;
-    }
+    if (isPaid) { window.location.href = `/content/${song.id}`; return; }
     play(songToTrack(song), allSongs.map(songToTrack));
   };
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors group cursor-pointer ${isActive ? "bg-primary/5 border border-primary/20" : "border border-transparent"}`}
-      onClick={handlePlay}>
-      <span className={`text-sm w-5 text-center flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+    <div
+      className={`group flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer transition-all duration-150 ${
+        isActive
+          ? "bg-amber-500/10 border border-amber-500/25"
+          : "border border-transparent hover:bg-white/[0.04] hover:border-white/8"
+      }`}
+      onClick={handlePlay}
+    >
+      {/* Index / eq indicator */}
+      <div className="w-5 flex-shrink-0 flex items-center justify-center">
         {isActive && isPlaying ? (
-          <span className="inline-flex gap-0.5 items-end h-4">
-            <span className="w-0.5 bg-primary animate-bounce" style={{ height: "60%", animationDelay: "0ms" }} />
-            <span className="w-0.5 bg-primary animate-bounce" style={{ height: "100%", animationDelay: "150ms" }} />
-            <span className="w-0.5 bg-primary animate-bounce" style={{ height: "40%", animationDelay: "300ms" }} />
-          </span>
-        ) : index + 1}
-      </span>
-
-      <div className="w-10 h-10 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
-        {coverSrc ? (
-          <Image src={coverSrc} alt={song.title} width={40} height={40} className="w-full h-full object-cover" />
+          <EqBars />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Music className="w-4 h-4 text-muted-foreground" />
+          <span className={`text-xs tabular-nums ${isActive ? "text-amber-400 font-semibold" : "text-muted-foreground group-hover:opacity-0 transition-opacity"}`}>
+            {index + 1}
+          </span>
+        )}
+      </div>
+
+      {/* Cover art */}
+      <div className="relative w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden bg-white/5 ring-1 ring-white/8">
+        {coverSrc ? (
+          <Image src={coverSrc} alt={song.title} width={48} height={48} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-600/10">
+            <Music className="w-5 h-5 text-amber-400/50" />
+          </div>
+        )}
+        {/* Play overlay on hover (when not active) */}
+        {!isActive && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
+              <Play className="w-3.5 h-3.5 fill-black text-black translate-x-px" />
+            </div>
+          </div>
+        )}
+        {/* Lock overlay for paid */}
+        {isPaid && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <Lock className="w-4 h-4 text-white/70" />
           </div>
         )}
       </div>
 
+      {/* Title + artist */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className={`font-medium text-sm truncate ${isActive ? "text-primary" : ""}`}>{song.title}</span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className={`font-semibold text-sm truncate leading-tight ${isActive ? "text-amber-400" : "text-foreground"}`}>
+            {song.title}
+          </span>
           {song.musicMetadata?.explicit && (
-            <span className="text-[10px] px-1 rounded bg-muted text-muted-foreground font-bold flex-shrink-0">E</span>
+            <span className="text-[9px] px-1 py-0.5 rounded bg-white/10 text-muted-foreground font-bold flex-shrink-0 leading-none">E</span>
           )}
         </div>
-        <Link href={`/creator/${song.creator.handle}`} className="text-xs text-muted-foreground hover:text-primary transition-colors truncate block"
-          onClick={(e) => e.stopPropagation()}>
+        <Link
+          href={`/creator/${song.creator.handle}`}
+          className="text-xs text-muted-foreground hover:text-amber-400 transition-colors truncate block mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           {song.creator.displayName || song.creator.handle}
         </Link>
       </div>
 
+      {/* Genre pill */}
       {song.musicMetadata?.genre && (
-        <span className="hidden sm:block text-xs text-muted-foreground capitalize">{song.musicMetadata.genre}</span>
+        <span className="hidden sm:block text-[11px] text-muted-foreground/60 capitalize px-2 py-0.5 rounded-full bg-white/5 border border-white/8 flex-shrink-0">
+          {song.musicMetadata.genre}
+        </span>
       )}
 
-      <span className="text-xs text-muted-foreground hidden sm:block">{fmtDuration(song.musicMetadata?.durationSeconds)}</span>
+      {/* Duration */}
+      {song.musicMetadata?.durationSeconds && (
+        <span className="text-xs text-muted-foreground/50 tabular-nums hidden sm:block flex-shrink-0">
+          {fmtDuration(song.musicMetadata.durationSeconds)}
+        </span>
+      )}
 
-      <div className="text-sm font-medium flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-        {song.priceTzs === 0 ? (
-          <span className="text-xs text-green-500">Free</span>
-        ) : (
-          <Link href={`/content/${song.id}`} className="text-xs text-primary hover:underline">
+      {/* Price */}
+      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        {isPaid ? (
+          <Link href={`/content/${song.id}`}
+            className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors border border-amber-500/20">
             {song.priceTzs.toLocaleString()} TZS
           </Link>
+        ) : (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Free
+          </span>
         )}
       </div>
     </div>
@@ -206,24 +256,37 @@ export default function MusicPage() {
 
   return (
     <FanShell title="Music">
-      <div className="space-y-6">
-        {/* Genre filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <style>{`@keyframes eqBounce { from { height: 25%; } to { height: 100%; } }`}</style>
+      <div className="space-y-5">
+
+        {/* ── Genre filter ── */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
           {GENRES.map((g) => (
-            <button key={g}
+            <button
+              key={g}
               onClick={() => setGenre(g)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all capitalize ${genre === g ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all capitalize border ${
+                genre === g
+                  ? "bg-amber-500 text-black border-amber-500 shadow-lg shadow-amber-500/20"
+                  : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20 hover:text-foreground hover:bg-white/8"
+              }`}
             >
               {g}
             </button>
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
+        {/* ── Tab switcher ── */}
+        <div className="flex gap-0 bg-white/5 border border-white/8 p-1 rounded-xl w-fit">
           {(["songs", "releases"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-all ${tab === t ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                tab === t
+                  ? "bg-white/10 text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               {t === "releases" ? "Albums & EPs" : "Songs"}
             </button>
@@ -231,27 +294,47 @@ export default function MusicPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-24">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-7 h-7 animate-spin text-amber-400" />
+              <p className="text-sm text-muted-foreground">Loading tracks…</p>
+            </div>
           </div>
         ) : tab === "songs" ? (
           songs.length === 0 ? (
-            <div className="text-center py-20 space-y-2">
-              <Mic2 className="w-12 h-12 text-muted-foreground/40 mx-auto" />
-              <p className="text-muted-foreground">No songs found</p>
+            <div className="text-center py-24 space-y-3">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center mx-auto">
+                <Mic2 className="w-8 h-8 text-muted-foreground/40" />
+              </div>
+              <p className="font-medium text-muted-foreground">No songs found</p>
+              <p className="text-sm text-muted-foreground/60">Try a different genre filter</p>
             </div>
           ) : (
-            <div className="space-y-1">
-              {songs.map((song, i) => (
-                <SongRow key={song.id} song={song} index={i} allSongs={songs} />
-              ))}
+            <div className="rounded-2xl border border-white/8 bg-white/[0.02] overflow-hidden">
+              {/* Column headers */}
+              <div className="hidden sm:grid grid-cols-[24px_48px_1fr_auto_auto_auto] gap-3 px-4 py-2.5 border-b border-white/6 items-center">
+                <span className="text-[11px] text-muted-foreground/50 font-medium text-center">#</span>
+                <span />
+                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Title</span>
+                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Genre</span>
+                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Time</span>
+                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Price</span>
+              </div>
+              <div className="p-2 space-y-0.5">
+                {songs.map((song, i) => (
+                  <SongRow key={song.id} song={song} index={i} allSongs={songs} />
+                ))}
+              </div>
             </div>
           )
         ) : (
           albums.length === 0 ? (
-            <div className="text-center py-20 space-y-2">
-              <Disc3 className="w-12 h-12 text-muted-foreground/40 mx-auto" />
-              <p className="text-muted-foreground">No releases yet</p>
+            <div className="text-center py-24 space-y-3">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center mx-auto">
+                <Disc3 className="w-8 h-8 text-muted-foreground/40" />
+              </div>
+              <p className="font-medium text-muted-foreground">No releases yet</p>
+              <p className="text-sm text-muted-foreground/60">Albums and EPs will appear here</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
