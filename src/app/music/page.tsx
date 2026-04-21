@@ -92,10 +92,10 @@ function SongRow({ song, index, allSongs }: { song: Song; index: number; allSong
 
   return (
     <div
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer transition-all duration-150 ${
+      className={`group flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-150 border ${
         isActive
-          ? "bg-amber-500/10 border border-amber-500/25"
-          : "border border-transparent hover:bg-white/[0.04] hover:border-white/8"
+          ? "bg-amber-500/10 border-amber-500/25"
+          : "border-transparent hover:bg-white/[0.04] hover:border-white/8"
       }`}
       onClick={handlePlay}
     >
@@ -104,25 +104,25 @@ function SongRow({ song, index, allSongs }: { song: Song; index: number; allSong
         {isActive && isPlaying ? (
           <EqBars />
         ) : (
-          <span className={`text-xs tabular-nums ${isActive ? "text-amber-400 font-semibold" : "text-muted-foreground group-hover:opacity-0 transition-opacity"}`}>
+          <span className={`text-xs tabular-nums ${isActive ? "text-amber-400 font-semibold" : "text-white/30 group-hover:opacity-0 transition-opacity"}`}>
             {index + 1}
           </span>
         )}
       </div>
 
       {/* Cover art */}
-      <div className="relative w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden bg-white/5 ring-1 ring-white/8">
+      <div className="relative w-12 h-12 flex-shrink-0 overflow-hidden bg-white/5 border border-white/8">
         {coverSrc ? (
           <Image src={coverSrc} alt={song.title} width={48} height={48} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-600/10">
+          <div className="w-full h-full flex items-center justify-center bg-amber-500/10">
             <Music className="w-5 h-5 text-amber-400/50" />
           </div>
         )}
         {/* Play overlay on hover (when not active) */}
         {!isActive && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
+            <div className="w-7 h-7 bg-amber-500 flex items-center justify-center">
               <Play className="w-3.5 h-3.5 fill-black text-black translate-x-px" />
             </div>
           </div>
@@ -138,16 +138,16 @@ function SongRow({ song, index, allSongs }: { song: Song; index: number; allSong
       {/* Title + artist */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`font-semibold text-sm truncate leading-tight ${isActive ? "text-amber-400" : "text-foreground"}`}>
+          <span className={`font-semibold text-sm truncate leading-tight ${isActive ? "text-amber-400" : "text-white"}`}>
             {song.title}
           </span>
           {song.musicMetadata?.explicit && (
-            <span className="text-[9px] px-1 py-0.5 rounded bg-white/10 text-muted-foreground font-bold flex-shrink-0 leading-none">E</span>
+            <span className="text-[9px] px-1 py-0.5 rounded bg-white/10 text-white/40 font-bold flex-shrink-0 leading-none">E</span>
           )}
         </div>
         <Link
           href={`/creator/${song.creator.handle}`}
-          className="text-xs text-muted-foreground hover:text-amber-400 transition-colors truncate block mt-0.5"
+          className="text-xs text-white/40 hover:text-amber-400 transition-colors truncate block mt-0.5"
           onClick={(e) => e.stopPropagation()}
         >
           {song.creator.displayName || song.creator.handle}
@@ -156,14 +156,14 @@ function SongRow({ song, index, allSongs }: { song: Song; index: number; allSong
 
       {/* Genre pill */}
       {song.musicMetadata?.genre && (
-        <span className="hidden sm:block text-[11px] text-muted-foreground/60 capitalize px-2 py-0.5 rounded-full bg-white/5 border border-white/8 flex-shrink-0">
+        <span className="hidden sm:block text-[11px] text-white/40/60 capitalize px-2 py-0.5 rounded-full bg-white/5 border border-white/8 flex-shrink-0">
           {song.musicMetadata.genre}
         </span>
       )}
 
       {/* Duration */}
       {song.musicMetadata?.durationSeconds && (
-        <span className="text-xs text-muted-foreground/50 tabular-nums hidden sm:block flex-shrink-0">
+        <span className="text-xs text-white/40/50 tabular-nums hidden sm:block flex-shrink-0">
           {fmtDuration(song.musicMetadata.durationSeconds)}
         </span>
       )}
@@ -193,13 +193,13 @@ function AlbumCard({ album }: { album: Album }) {
 
   return (
     <Link href={`/music/${album.id}`}
-      className="bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all group">
-      <div className="aspect-square bg-gradient-to-br from-primary/20 to-purple-500/20 relative overflow-hidden">
+      className="bg-neutral-950 border border-white/10 overflow-hidden hover:border-amber-500/30 transition-all group">
+      <div className="aspect-square bg-neutral-900 relative overflow-hidden">
         {coverSrc ? (
           <Image src={coverSrc} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Disc3 className="w-12 h-12 text-primary/30" />
+            <Disc3 className="w-12 h-12 text-white/10" />
           </div>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -213,10 +213,10 @@ function AlbumCard({ album }: { album: Album }) {
       </div>
       <div className="p-3">
         <h3 className="font-semibold text-sm truncate">{album.title}</h3>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+        <p className="text-xs text-white/40 mt-0.5 truncate">
           {album.creator.displayName || album.creator.handle}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">{album.items.length} track{album.items.length !== 1 ? "s" : ""}</p>
+        <p className="text-xs text-white/40 mt-1">{album.items.length} track{album.items.length !== 1 ? "s" : ""}</p>
       </div>
     </Link>
   );
@@ -265,10 +265,10 @@ export default function MusicPage() {
             <button
               key={g}
               onClick={() => setGenre(g)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all capitalize border ${
+              className={`flex-shrink-0 px-3.5 py-1.5 text-sm font-mono font-medium transition-all capitalize border ${
                 genre === g
-                  ? "bg-amber-500 text-black border-amber-500 shadow-lg shadow-amber-500/20"
-                  : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20 hover:text-foreground hover:bg-white/8"
+                  ? "bg-amber-500 text-black border-amber-500"
+                  : "bg-white/5 text-white/40 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/8"
               }`}
             >
               {g}
@@ -277,15 +277,15 @@ export default function MusicPage() {
         </div>
 
         {/* ── Tab switcher ── */}
-        <div className="flex gap-0 bg-white/5 border border-white/8 p-1 rounded-xl w-fit">
+        <div className="flex gap-0 border border-white/10 w-fit">
           {(["songs", "releases"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`px-5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider transition-all ${
                 tab === t
-                  ? "bg-white/10 text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-amber-500/10 text-amber-400 border-r border-white/10 last:border-r-0"
+                  : "text-white/30 hover:text-white"
               }`}
             >
               {t === "releases" ? "Albums & EPs" : "Songs"}
@@ -297,28 +297,28 @@ export default function MusicPage() {
           <div className="flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-7 h-7 animate-spin text-amber-400" />
-              <p className="text-sm text-muted-foreground">Loading tracks…</p>
+              <p className="text-sm text-white/40">Loading tracks…</p>
             </div>
           </div>
         ) : tab === "songs" ? (
           songs.length === 0 ? (
             <div className="text-center py-24 space-y-3">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center mx-auto">
-                <Mic2 className="w-8 h-8 text-muted-foreground/40" />
+              <div className="w-16 h-16 bg-white/5 border border-white/8 flex items-center justify-center mx-auto">
+                <Mic2 className="w-8 h-8 text-white/40/40" />
               </div>
-              <p className="font-medium text-muted-foreground">No songs found</p>
-              <p className="text-sm text-muted-foreground/60">Try a different genre filter</p>
+              <p className="font-medium text-white/40">No songs found</p>
+              <p className="text-sm text-white/40/60">Try a different genre filter</p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/8 bg-white/[0.02] overflow-hidden">
+            <div className="border border-white/8 bg-white/[0.02] overflow-hidden">
               {/* Column headers */}
               <div className="hidden sm:grid grid-cols-[24px_48px_1fr_auto_auto_auto] gap-3 px-4 py-2.5 border-b border-white/6 items-center">
-                <span className="text-[11px] text-muted-foreground/50 font-medium text-center">#</span>
+                <span className="text-[11px] text-white/40/50 font-medium text-center">#</span>
                 <span />
-                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Title</span>
-                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Genre</span>
-                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Time</span>
-                <span className="text-[11px] text-muted-foreground/50 font-medium uppercase tracking-wider">Price</span>
+                <span className="text-[11px] text-white/40/50 font-medium uppercase tracking-wider">Title</span>
+                <span className="text-[11px] text-white/40/50 font-medium uppercase tracking-wider">Genre</span>
+                <span className="text-[11px] text-white/40/50 font-medium uppercase tracking-wider">Time</span>
+                <span className="text-[11px] text-white/40/50 font-medium uppercase tracking-wider">Price</span>
               </div>
               <div className="p-2 space-y-0.5">
                 {songs.map((song, i) => (
@@ -330,11 +330,11 @@ export default function MusicPage() {
         ) : (
           albums.length === 0 ? (
             <div className="text-center py-24 space-y-3">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center mx-auto">
-                <Disc3 className="w-8 h-8 text-muted-foreground/40" />
+              <div className="w-16 h-16 bg-white/5 border border-white/8 flex items-center justify-center mx-auto">
+                <Disc3 className="w-8 h-8 text-white/40/40" />
               </div>
-              <p className="font-medium text-muted-foreground">No releases yet</p>
-              <p className="text-sm text-muted-foreground/60">Albums and EPs will appear here</p>
+              <p className="font-medium text-white/40">No releases yet</p>
+              <p className="text-sm text-white/40/60">Albums and EPs will appear here</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

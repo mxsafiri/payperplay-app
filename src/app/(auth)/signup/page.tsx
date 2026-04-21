@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
 import { Users, Palette } from "lucide-react";
 
 type UserRole = "creator" | "fan";

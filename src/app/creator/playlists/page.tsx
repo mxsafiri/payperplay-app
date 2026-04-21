@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Input } from "@/components/ui/input";
 
 interface PlaylistItem {
   id: string;
@@ -143,18 +142,18 @@ export default function PlaylistsPage() {
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Title *</label>
-                <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Nubongo Show Season 1"
-                  className="bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none" />
+                <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Nubongo Show Season 1"
+                  className="w-full px-3 py-2.5 bg-white/5 border border-white/15 text-white placeholder:text-white/20 font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Description</label>
-                <Input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Brief description of this series"
-                  className="bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none" />
+                <input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Brief description of this series"
+                  className="w-full px-3 py-2.5 bg-white/5 border border-white/15 text-white placeholder:text-white/20 font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Category</label>
-                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Entertainment, Music, Education"
-                  className="bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none" />
+                <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Entertainment, Music, Education"
+                  className="w-full px-3 py-2.5 bg-white/5 border border-white/15 text-white placeholder:text-white/20 font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors" />
               </div>
               <div className="flex gap-2">
                 <button onClick={handleCreate} disabled={creating || !newTitle.trim()}

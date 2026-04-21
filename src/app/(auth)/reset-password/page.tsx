@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CheckCircle, Lock } from "lucide-react";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -20,41 +19,23 @@ function ResetPasswordForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      setError("Invalid or missing reset token. Please request a new reset link.");
-    }
+    if (!token) setError("Invalid or missing reset token. Please request a new reset link.");
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (!token) {
-      setError("Invalid reset token. Please request a new reset link.");
-      return;
-    }
-
+    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (password !== confirm) { setError("Passwords do not match"); return; }
+    if (!token) { setError("Invalid reset token. Please request a new reset link."); return; }
     setLoading(true);
     try {
-      const result = await authClient.resetPassword({
-        newPassword: password,
-        token,
-      });
-
+      const result = await authClient.resetPassword({ newPassword: password, token });
       if (result.error) {
         setError(result.error.message || "Failed to reset password");
         setLoading(false);
         return;
       }
-
       setSuccess(true);
       setTimeout(() => router.push("/login"), 3000);
     } catch {
@@ -65,55 +46,85 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center px-4">
+    <div className="min-h-screen relative flex items-center justify-center px-4 bg-neutral-950">
       <div className="fixed inset-0 z-0">
-        <Image src="/BG.jpg" alt="" fill className="object-cover" sizes="100vw" priority />
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-purple-900/20" />
+        <Image src="/BG.jpg" alt="" fill className="object-cover opacity-15" sizes="100vw" priority />
+        <div className="absolute inset-0 tech-grid" />
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/6 via-transparent to-pink-500/6" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-card/80 backdrop-blur-xl shadow-2xl p-8">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="fixed top-6 left-6 w-8 h-8 border-t border-l border-amber-500/30 z-10" />
+      <div className="fixed top-6 right-6 w-8 h-8 border-t border-r border-amber-500/30 z-10" />
+      <div className="fixed bottom-6 left-6 w-8 h-8 border-b border-l border-amber-500/30 z-10" />
+      <div className="fixed bottom-6 right-6 w-8 h-8 border-b border-r border-amber-500/30 z-10" />
 
-        <div className="relative">
+      <div className="relative z-10 w-full max-w-md">
+        <div className="border border-white/10 bg-neutral-950/90 backdrop-blur-xl p-8 relative">
+          <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
+          <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/50" />
+          <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/50" />
+          <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/50" />
+
+          {/* Brand */}
+          <div className="flex items-center justify-center gap-2.5 mb-8">
+            <div className="w-8 h-8 bg-amber-500 flex items-center justify-center">
+              <span className="text-black font-mono font-black text-sm">▶</span>
+            </div>
+            <span className="text-white font-mono font-bold text-sm tracking-widest uppercase italic -skew-x-6 inline-block">PayPerPlay</span>
+          </div>
+
           {success ? (
             <div className="text-center space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-full bg-green-500/15 flex items-center justify-center">
-                <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+              <div className="w-12 h-12 mx-auto border border-green-500/30 bg-green-500/10 flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-400" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">Password updated!</h1>
-              <p className="text-muted-foreground text-sm">
-                Your password has been reset successfully. Redirecting you to sign in...
+              <div>
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="h-px w-6 bg-amber-500/40" />
+                  <span className="text-[9px] font-mono text-amber-500/60 tracking-widest uppercase">Success</span>
+                  <div className="h-px w-6 bg-amber-500/40" />
+                </div>
+                <h1 className="text-xl font-bold font-mono tracking-tight text-white">Password updated!</h1>
+              </div>
+              <p className="text-[11px] font-mono text-white/40 leading-relaxed">
+                Your password has been reset. Redirecting to sign in...
               </p>
-              <Link href="/login">
-                <Button className="w-full mt-2">Sign In Now</Button>
+              <Link
+                href="/login"
+                className="inline-flex h-9 w-full items-center justify-center bg-amber-500 text-[11px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
+              >
+                Sign In Now →
               </Link>
             </div>
           ) : (
             <>
-              <div className="text-center space-y-2 mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">Set new password</h1>
-                <p className="text-muted-foreground text-sm">Choose a strong password for your account</p>
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="h-px w-6 bg-amber-500/40" />
+                  <span className="text-[9px] font-mono text-amber-500/60 tracking-widest uppercase">New Password</span>
+                  <div className="h-px w-6 bg-amber-500/40" />
+                </div>
+                <h1 className="text-2xl font-bold font-mono tracking-tight text-white">Set new password</h1>
+                <p className="text-[10px] font-mono text-white/30 mt-1 uppercase tracking-wider">Choose a strong password for your account</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+                  <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[11px] font-mono leading-relaxed">
                     {error}
                     {!token && (
-                      <Link href="/forgot-password" className="block mt-2 underline font-medium">
+                      <Link href="/forgot-password" className="block mt-2 text-amber-400 hover:text-amber-300 underline">
                         Request a new link →
                       </Link>
                     )}
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium">New Password</label>
-                  <Input
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="text-[10px] font-mono text-white/40 uppercase tracking-widest">
+                    <Lock className="w-3 h-3 inline mr-1" />New Password
+                  </label>
+                  <input
                     id="password"
                     type="password"
                     placeholder="••••••••"
@@ -122,13 +133,14 @@ function ResetPasswordForm() {
                     required
                     disabled={loading || !token}
                     minLength={8}
+                    className="w-full px-3 py-2.5 bg-white/5 border border-white/15 text-white placeholder:text-white/20 font-mono text-sm focus:outline-none focus:border-amber-500/50 transition-colors disabled:opacity-50"
                   />
-                  <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
+                  <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Minimum 8 characters</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="confirm" className="text-sm font-medium">Confirm Password</label>
-                  <Input
+                <div className="space-y-1.5">
+                  <label htmlFor="confirm" className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Confirm Password</label>
+                  <input
                     id="confirm"
                     type="password"
                     placeholder="••••••••"
@@ -136,21 +148,20 @@ function ResetPasswordForm() {
                     onChange={(e) => setConfirm(e.target.value)}
                     required
                     disabled={loading || !token}
+                    className="w-full px-3 py-2.5 bg-white/5 border border-white/15 text-white placeholder:text-white/20 font-mono text-sm focus:outline-none focus:border-amber-500/50 transition-colors disabled:opacity-50"
                   />
                 </div>
 
-                <Button
+                <button
                   type="submit"
-                  className="w-full"
                   disabled={loading || !token}
+                  className="w-full inline-flex h-10 items-center justify-center bg-amber-500 text-[11px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Updating..." : "Update Password"}
-                </Button>
+                  {loading ? "Updating..." : "Update Password →"}
+                </button>
 
-                <div className="text-center text-sm text-muted-foreground">
-                  <Link href="/login" className="text-primary hover:underline">
-                    Back to Sign In
-                  </Link>
+                <div className="text-center text-[10px] font-mono text-white/30 uppercase tracking-wider">
+                  <Link href="/login" className="text-amber-500/70 hover:text-amber-400 transition-colors">← Back to Sign In</Link>
                 </div>
               </form>
             </>
@@ -164,8 +175,11 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
+        <div className="relative w-10 h-10">
+          <div className="absolute inset-0 border border-amber-500/30 animate-spin" />
+          <div className="absolute inset-2 border border-amber-500/20 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+        </div>
       </div>
     }>
       <ResetPasswordForm />

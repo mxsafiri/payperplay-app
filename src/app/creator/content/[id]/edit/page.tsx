@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
 import { Eye, Heart, MessageCircle, ArrowLeft, Film, Plus, Save, Trash2, Send, Share2, Copy, Check, Link2, ExternalLink } from "lucide-react";
 import { useToast, Toaster } from "@/components/ui/toast";
 
@@ -315,8 +314,9 @@ export default function ContentEditPage() {
 
         {/* Share Links */}
         {content.status === "published" && (
-          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 backdrop-blur-md bg-gradient-to-br from-amber-500/5 to-orange-500/5">
-            <div className="relative p-6">
+          <div className="border border-amber-500/20 bg-amber-500/[0.02] relative">
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
+            <div className="relative p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Share2 className="w-5 h-5 text-amber-400" />
@@ -335,34 +335,34 @@ export default function ContentEditPage() {
                 )}
               </div>
 
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-[11px] font-mono text-white/30 mb-4 leading-relaxed">
                 Generate view-once links to share on WhatsApp, Instagram, Twitter — fans pay with M-Pesa, no account needed.
               </p>
 
               {/* Create link form */}
               {showLinkForm && (
-                <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 space-y-3">
+                <div className="border border-white/10 bg-white/[0.02] p-4 mb-4 space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
-                      <label className="text-xs text-muted-foreground mb-1 block">Price (TZS)</label>
-                      <Input
+                      <label className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1 block">Price (TZS)</label>
+                      <input
                         type="number"
                         value={linkPrice}
                         onChange={(e) => setLinkPrice(e.target.value)}
                         min={100}
                         placeholder="500"
-                        className="bg-white/5 border-white/10"
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors"
                       />
                     </div>
                     <div className="w-24">
-                      <label className="text-xs text-muted-foreground mb-1 block">Preview (s)</label>
-                      <Input
+                      <label className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1 block">Preview (s)</label>
+                      <input
                         type="number"
                         value={linkTeaser}
                         onChange={(e) => setLinkTeaser(e.target.value)}
                         min={5}
                         max={30}
-                        className="bg-white/5 border-white/10"
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors"
                       />
                     </div>
                   </div>
@@ -391,18 +391,18 @@ export default function ContentEditPage() {
                   {viewOnceLinks.map((vl) => (
                     <div
                       key={vl.id}
-                      className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3"
+                      className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/5 px-4 py-3"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <code className="text-xs text-amber-400 font-mono truncate">
                             payperplay.xyz/v/{vl.slug}
                           </code>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          <span className="text-xs text-white/40 whitespace-nowrap">
                             {vl.priceTzs.toLocaleString()} TZS
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-xs text-white/40 mt-0.5">
                           {vl.purchaseCount} purchase{vl.purchaseCount !== 1 ? "s" : ""} &middot; {vl.teaserSeconds}s preview
                         </p>
                       </div>
@@ -428,9 +428,9 @@ export default function ContentEditPage() {
                   ))}
                 </div>
               ) : !showLinkForm ? (
-                <div className="text-center py-4 bg-white/[0.02] rounded-xl border border-dashed border-white/10">
-                  <Share2 className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
-                  <p className="text-xs text-muted-foreground">
+                <div className="text-center py-4 bg-white/[0.02] border border-dashed border-white/10">
+                  <Share2 className="w-6 h-6 text-white/30 mx-auto mb-1.5" />
+                  <p className="text-[10px] font-mono text-white/30">
                     No share links yet — create one to start earning from social media
                   </p>
                 </div>
@@ -457,8 +457,8 @@ export default function ContentEditPage() {
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Title</label>
-              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
-                className="bg-white/5 border-white/15 text-white font-mono text-sm rounded-none" />
+              <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white/5 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors" />
             </div>
 
             <div className="space-y-1.5">
@@ -494,8 +494,8 @@ export default function ContentEditPage() {
               </div>
               {editPriceType === "paid" && (
                 <div className="flex items-center gap-2">
-                  <Input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} min={500} placeholder="500"
-                    className="bg-white/5 border-white/15 text-white font-mono text-sm rounded-none w-36" />
+                  <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} min={500} placeholder="500"
+                    className="w-36 px-3 py-2.5 bg-white/5 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors" />
                   <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">TZS</span>
                 </div>
               )}
@@ -544,8 +544,8 @@ export default function ContentEditPage() {
             </h2>
 
             <div className="flex gap-2 mb-5">
-              <Input value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Reply to your fans..."
-                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none flex-1"
+              <input value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Reply to your fans..."
+                className="flex-1 px-3 py-2 bg-white/5 border border-white/15 text-white placeholder:text-white/20 font-mono text-sm focus:outline-none focus:border-amber-500/40 transition-colors"
                 onKeyDown={(e) => e.key === "Enter" && handleReply()} />
               <button onClick={handleReply} disabled={replying || !replyText.trim()}
                 className="inline-flex h-9 items-center px-4 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50">
