@@ -323,16 +323,15 @@ export default function ContentEditPage() {
                   <h2 className="text-lg font-semibold tracking-tight">Share & Earn</h2>
                 </div>
                 {!showLinkForm && (
-                  <Button
-                    size="sm"
+                  <button
                     onClick={() => {
                       setShowLinkForm(true);
                       setLinkPrice(String(content.priceTzs || 500));
                     }}
-                    className="bg-amber-500 hover:bg-amber-400 text-black text-xs"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-mono font-semibold uppercase tracking-widest transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Create Link
-                  </Button>
+                    <Plus className="w-3 h-3" /> Create Link
+                  </button>
                 )}
               </div>
 
@@ -368,23 +367,20 @@ export default function ContentEditPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
+                    <button
                       onClick={handleCreateLink}
                       disabled={creatingLink}
-                      className="bg-amber-500 hover:bg-amber-400 text-black"
+                      className="inline-flex items-center gap-1.5 h-8 px-3 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-mono font-semibold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Link2 className="w-3.5 h-3.5 mr-1" />
+                      <Link2 className="w-3 h-3" />
                       {creatingLink ? "Creating..." : "Generate Link"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
+                    </button>
+                    <button
                       onClick={() => setShowLinkForm(false)}
-                      className="text-muted-foreground"
+                      className="inline-flex items-center h-8 px-3 border border-white/15 text-[10px] font-mono text-white/40 uppercase tracking-widest hover:border-white/30 hover:text-white transition-all"
                     >
                       Cancel
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
@@ -411,26 +407,22 @@ export default function ContentEditPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <button
                           onClick={() => copyToClipboard(vl.url, vl.slug)}
-                          className="h-8 w-8 p-0 hover:bg-white/10"
+                          className="h-8 w-8 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all"
                         >
                           {copiedSlug === vl.slug ? (
                             <Check className="w-3.5 h-3.5 text-green-400" />
                           ) : (
                             <Copy className="w-3.5 h-3.5" />
                           )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        </button>
+                        <button
                           onClick={() => shareLink(vl.url, content.title)}
-                          className="h-8 w-8 p-0 hover:bg-white/10"
+                          className="h-8 w-8 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   ))}
