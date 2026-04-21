@@ -2,151 +2,186 @@
 
 import Link from "next/link";
 import { ArrowLeft, Shield, AlertTriangle, Scale, FileCheck, Ban, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function ContentPolicyPage() {
   return (
     <div className="p-4 lg:p-8 pb-24 lg:pb-8 max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <Link href="/creator/dashboard" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+        <Link
+          href="/creator/dashboard"
+          className="inline-flex items-center gap-2 text-[11px] font-mono text-white/40 uppercase tracking-wider hover:text-white border border-white/10 hover:border-white/25 px-3 py-1.5 transition-all mb-6"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          Dashboard
         </Link>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
+          <div className="w-10 h-10 border border-amber-500/30 bg-amber-500/10 flex items-center justify-center flex-shrink-0">
             <Shield className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Content Policy & Creator Agreement</h1>
-            <p className="text-sm text-muted-foreground">
-              Last updated: March 2026
-            </p>
+            <div className="flex items-center gap-2 mb-0.5">
+              <div className="h-px w-4 bg-amber-500/40" />
+              <span className="text-[9px] font-mono text-amber-500/50 tracking-widest uppercase">Creator.Studio</span>
+            </div>
+            <h1 className="text-lg font-bold font-mono tracking-tight text-white">Content Policy</h1>
+            <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mt-0.5">Last updated: March 2026</p>
           </div>
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-4">
         {/* Declaration of Ownership */}
-        <section className="border border-white/10 rounded-2xl bg-white/[0.02] p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <FileCheck className="w-5 h-5 text-emerald-400" />
-            Declaration of Content Ownership
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              By uploading content to PayPerPlay, you confirm and declare that:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-2">
-              <li>
-                <strong className="text-foreground">You are the original creator</strong> of the content, or you have obtained
-                all necessary rights, licenses, and permissions to distribute it.
-              </li>
-              <li>
-                <strong className="text-foreground">You hold full ownership or licensing rights</strong> to any music,
-                visuals, graphics, audio, and all other elements contained in your content.
-              </li>
-              <li>
-                <strong className="text-foreground">Your content does not infringe</strong> on any third-party copyrights,
-                trademarks, intellectual property rights, privacy rights, or any other rights.
-              </li>
-              <li>
-                <strong className="text-foreground">You grant PayPerPlay a non-exclusive license</strong> to host, display,
-                stream, and distribute your content through our platform for the purpose of content delivery to your audience.
-              </li>
-            </ul>
+        <section className="border border-white/10 bg-neutral-950 relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/20" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <FileCheck className="w-4 h-4 text-green-400" />
+              <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest">DECLARATION.OF.OWNERSHIP</div>
+            </div>
+            <div className="space-y-2 text-[12px] font-mono text-white/40 leading-relaxed">
+              <p>By uploading content to PayPerPlay, you confirm and declare that:</p>
+              <ul className="space-y-2 mt-2">
+                {[
+                  ["You are the original creator", "of the content, or you have obtained all necessary rights, licenses, and permissions to distribute it."],
+                  ["You hold full ownership or licensing rights", "to any music, visuals, graphics, audio, and all other elements contained in your content."],
+                  ["Your content does not infringe", "on any third-party copyrights, trademarks, intellectual property rights, privacy rights, or any other rights."],
+                  ["You grant PayPerPlay a non-exclusive license", "to host, display, stream, and distribute your content through our platform for the purpose of content delivery to your audience."],
+                ].map(([bold, rest], i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-amber-500/40 flex-shrink-0">◈</span>
+                    <span><span className="text-white/70">{bold}</span> {rest}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
         {/* Prohibited Content */}
-        <section className="border border-red-500/20 rounded-2xl bg-red-500/[0.03] p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <Ban className="w-5 h-5 text-red-400" />
-            Prohibited Content
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              The following types of content are <strong className="text-red-400">strictly prohibited</strong> on PayPerPlay:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-2">
-              <li><strong className="text-foreground">Adult/sexually explicit content</strong> — including nudity, pornography, or sexually suggestive material</li>
-              <li><strong className="text-foreground">Copyrighted material</strong> — content you do not own or have rights to (movies, TV shows, music by other artists without license)</li>
-              <li><strong className="text-foreground">Hate speech or harassment</strong> — content that promotes violence, discrimination, or harassment against any individual or group</li>
-              <li><strong className="text-foreground">Illegal activities</strong> — content depicting or promoting illegal acts under Tanzanian law or international law</li>
-              <li><strong className="text-foreground">Misinformation</strong> — deliberately false or misleading content designed to deceive or manipulate</li>
-              <li><strong className="text-foreground">Violence or graphic content</strong> — excessively violent, gory, or disturbing material</li>
-              <li><strong className="text-foreground">Content involving minors</strong> — any exploitative content involving children</li>
-              <li><strong className="text-foreground">Spam or misleading content</strong> — deceptive thumbnails, titles, or descriptions designed to mislead viewers</li>
-            </ul>
+        <section className="border border-red-500/20 bg-red-500/[0.02] relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-red-500/30" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Ban className="w-4 h-4 text-red-400" />
+              <div className="text-[9px] font-mono text-red-400/50 uppercase tracking-widest">PROHIBITED.CONTENT</div>
+            </div>
+            <div className="space-y-2 text-[12px] font-mono text-white/40 leading-relaxed">
+              <p>The following types of content are <span className="text-red-400">strictly prohibited</span> on PayPerPlay:</p>
+              <ul className="space-y-2 mt-2">
+                {[
+                  ["Adult/sexually explicit content", "— nudity, pornography, or sexually suggestive material"],
+                  ["Copyrighted material", "— content you do not own or have rights to"],
+                  ["Hate speech or harassment", "— content promoting violence, discrimination, or harassment"],
+                  ["Illegal activities", "— content depicting or promoting illegal acts under Tanzanian or international law"],
+                  ["Misinformation", "— deliberately false or misleading content"],
+                  ["Violence or graphic content", "— excessively violent, gory, or disturbing material"],
+                  ["Content involving minors", "— any exploitative content involving children"],
+                  ["Spam or misleading content", "— deceptive thumbnails, titles, or descriptions"],
+                ].map(([bold, rest], i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-red-500/40 flex-shrink-0">✕</span>
+                    <span><span className="text-white/70">{bold}</span> {rest}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
         {/* Copyright & DMCA */}
-        <section className="border border-white/10 rounded-2xl bg-white/[0.02] p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <Scale className="w-5 h-5 text-blue-400" />
-            Copyright & Takedown Policy
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              PayPerPlay respects intellectual property rights and complies with applicable copyright laws.
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-2">
-              <li>If you believe your copyrighted work has been uploaded without authorization, you may submit a takedown request to <strong className="text-foreground">legal@payperplay.xyz</strong>.</li>
-              <li>Repeat copyright infringers will have their accounts permanently suspended.</li>
-              <li>Creators who receive three copyright strikes will be permanently banned from the platform.</li>
-              <li>False takedown requests may result in legal liability.</li>
-            </ul>
+        <section className="border border-white/10 bg-neutral-950 relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/20" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Scale className="w-4 h-4 text-blue-400" />
+              <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest">COPYRIGHT.TAKEDOWN.POLICY</div>
+            </div>
+            <div className="space-y-2 text-[12px] font-mono text-white/40 leading-relaxed">
+              <p>PayPerPlay respects intellectual property rights and complies with applicable copyright laws.</p>
+              <ul className="space-y-2 mt-2">
+                {[
+                  "If you believe your copyrighted work was uploaded without authorization, submit a takedown request to legal@payperplay.xyz.",
+                  "Repeat copyright infringers will have their accounts permanently suspended.",
+                  "Creators who receive three copyright strikes will be permanently banned from the platform.",
+                  "False takedown requests may result in legal liability.",
+                ].map((item, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-amber-500/40 flex-shrink-0">◈</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
         {/* Liability */}
-        <section className="border border-amber-500/20 rounded-2xl bg-amber-500/[0.03] p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
-            Limitation of Liability
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              <strong className="text-foreground">PayPerPlay is a platform provider, not a content publisher.</strong>
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-2">
-              <li>Creators are <strong className="text-foreground">solely responsible</strong> for the content they upload, publish, and monetize on PayPerPlay.</li>
-              <li>PayPerPlay does not pre-screen or approve content before publication.</li>
-              <li>Any legal claims, copyright disputes, or violations arising from uploaded content are the <strong className="text-foreground">full responsibility of the creator</strong>.</li>
-              <li>PayPerPlay reserves the right to remove any content that violates this policy, at any time, without prior notice.</li>
-              <li>Accounts found in violation may be suspended or terminated, and pending earnings may be withheld.</li>
-            </ul>
+        <section className="border border-amber-500/20 bg-amber-500/[0.02] relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest">LIMITATION.OF.LIABILITY</div>
+            </div>
+            <div className="space-y-2 text-[12px] font-mono text-white/40 leading-relaxed">
+              <p><span className="text-white/70">PayPerPlay is a platform provider, not a content publisher.</span></p>
+              <ul className="space-y-2 mt-2">
+                {[
+                  "Creators are solely responsible for the content they upload, publish, and monetize on PayPerPlay.",
+                  "PayPerPlay does not pre-screen or approve content before publication.",
+                  "Any legal claims, copyright disputes, or violations arising from uploaded content are the full responsibility of the creator.",
+                  "PayPerPlay reserves the right to remove any content that violates this policy, at any time, without prior notice.",
+                  "Accounts found in violation may be suspended or terminated, and pending earnings may be withheld.",
+                ].map((item, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-amber-500/40 flex-shrink-0">◈</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
         {/* Content Moderation */}
-        <section className="border border-white/10 rounded-2xl bg-white/[0.02] p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <Eye className="w-5 h-5 text-purple-400" />
-            Content Moderation
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              PayPerPlay uses a combination of automated tools and community reporting to moderate content:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-2">
-              <li>Users can report content that violates our policies.</li>
-              <li>Reported content is reviewed and may be removed within 24-48 hours.</li>
-              <li>Creators will be notified of any content removals and may appeal decisions.</li>
-              <li>Repeated violations result in escalating penalties: warning, temporary suspension, permanent ban.</li>
-            </ul>
+        <section className="border border-white/10 bg-neutral-950 relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/20" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Eye className="w-4 h-4 text-purple-400" />
+              <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest">CONTENT.MODERATION</div>
+            </div>
+            <div className="space-y-2 text-[12px] font-mono text-white/40 leading-relaxed">
+              <p>PayPerPlay uses a combination of automated tools and community reporting to moderate content:</p>
+              <ul className="space-y-2 mt-2">
+                {[
+                  "Users can report content that violates our policies.",
+                  "Reported content is reviewed and may be removed within 24-48 hours.",
+                  "Creators will be notified of any content removals and may appeal decisions.",
+                  "Repeated violations result in escalating penalties: warning, temporary suspension, permanent ban.",
+                ].map((item, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-amber-500/40 flex-shrink-0">◈</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
         {/* Agreement */}
-        <div className="border border-amber-500/30 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-6 text-center">
-          <p className="text-sm text-foreground">
-            By uploading content to PayPerPlay, you acknowledge that you have read, understood,
-            and agree to abide by this Content Policy & Creator Agreement.
+        <div className="border border-amber-500/30 bg-amber-500/5 p-5 text-center relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
+          <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-amber-500/40" />
+          <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-amber-500/40" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40" />
+          <p className="text-[11px] font-mono text-white/60 leading-relaxed">
+            By uploading content to PayPerPlay, you acknowledge that you have read, understood, and agree to abide by this Content Policy & Creator Agreement.
           </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            For questions, contact us at <strong>support@payperplay.xyz</strong>
+          <p className="text-[10px] font-mono text-white/30 mt-2 uppercase tracking-widest">
+            Questions → support@payperplay.xyz
           </p>
         </div>
       </div>

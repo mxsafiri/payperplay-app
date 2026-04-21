@@ -3,57 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Wallet,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Coins,
-  Banknote,
-  Phone,
-  TrendingUp,
-  Clock,
-  X,
-  CheckCircle,
-  AlertCircle,
-  CreditCard,
-  PiggyBank,
-} from "lucide-react";
+import { Wallet, TrendingUp, Coins, Banknote, Phone, Clock, CheckCircle, AlertCircle, CreditCard, PiggyBank, X } from "lucide-react";
 
 interface WalletData {
   wallet: {
-    id: string;
-    balance: number;
-    totalEarned: number;
-    totalWithdrawn: number;
-    totalFees: number;
-    ntzsBalance: number | null;
-    ntzsWalletAddress: string | null;
+    id: string; balance: number; totalEarned: number; totalWithdrawn: number;
+    totalFees: number; ntzsBalance: number | null; ntzsWalletAddress: string | null;
   };
   transactions: {
-    id: string;
-    type: string;
-    status: string;
-    amount: number;
-    balanceAfter: number;
-    description: string | null;
-    createdAt: string;
+    id: string; type: string; status: string; amount: number;
+    balanceAfter: number; description: string | null; createdAt: string;
   }[];
-}
-
-interface StatsData {
-  totalContent: number;
-  publishedContent: number;
-  totalViews: number;
-  totalEarnings: number;
 }
 
 export default function EarningsPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
-  const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -64,63 +31,40 @@ export default function EarningsPage() {
   const [txFilter, setTxFilter] = useState<"all" | "earning" | "withdrawal">("all");
 
   useEffect(() => {
-    if (!isPending && !session) {
-      router.push("/login");
-      return;
-    }
+    if (!isPending && !session) { router.push("/login"); return; }
     if (session) fetchData();
   }, [session, isPending, router]);
 
   const fetchData = async () => {
     try {
-      const [walletRes, statsRes] = await Promise.all([
-        fetch("/api/creator/wallet"),
-        fetch("/api/creator/stats"),
-      ]);
+      const [walletRes] = await Promise.all([fetch("/api/creator/wallet")]);
       if (walletRes.ok) setWalletData(await walletRes.json());
-      if (statsRes.ok) setStats(await statsRes.json());
-    } catch (error) {
-      console.error("Failed to fetch earnings:", error);
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   };
 
   const handleWithdraw = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setWithdrawError("");
-    setWithdrawSuccess("");
-    setWithdrawLoading(true);
-
+    e.preventDefault(); setWithdrawError(""); setWithdrawSuccess(""); setWithdrawLoading(true);
     try {
       const res = await fetch("/api/creator/wallet/withdraw", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: parseInt(withdrawAmount), phoneNumber: withdrawPhone }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setWithdrawError(data.error || "Withdrawal failed");
-        setWithdrawLoading(false);
-        return;
-      }
+      if (!res.ok) { setWithdrawError(data.error || "Withdrawal failed"); setWithdrawLoading(false); return; }
       setWithdrawSuccess(`${parseInt(withdrawAmount).toLocaleString()} TZS sent to ${withdrawPhone}!`);
-      setWithdrawAmount("");
-      setWithdrawPhone("");
-      fetchData();
-    } catch {
-      setWithdrawError("An unexpected error occurred");
-    } finally {
-      setWithdrawLoading(false);
-    }
+      setWithdrawAmount(""); setWithdrawPhone(""); fetchData();
+    } catch { setWithdrawError("An unexpected error occurred"); } finally { setWithdrawLoading(false); }
   };
 
   if (isPending || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">Loading earnings...</p>
+          <div className="relative w-10 h-10 mx-auto mb-4">
+            <div className="absolute inset-0 border border-amber-500/30 animate-spin" />
+            <div className="absolute inset-2 border border-amber-500/20 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+          </div>
+          <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">LOADING.EARNINGS</p>
         </div>
       </div>
     );
@@ -128,140 +72,100 @@ export default function EarningsPage() {
 
   const wallet = walletData?.wallet;
   const transactions = walletData?.transactions || [];
-  const filteredTx = txFilter === "all"
-    ? transactions
-    : transactions.filter((tx) => tx.type === txFilter);
-
+  const filteredTx = txFilter === "all" ? transactions : transactions.filter((tx) => tx.type === txFilter);
   const earningsTx = transactions.filter((tx) => tx.type === "earning");
   const withdrawalTx = transactions.filter((tx) => tx.type === "withdrawal");
-  const platformFees = wallet?.totalFees || 0;
 
   return (
     <>
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-white/10 backdrop-blur-xl bg-background/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <header className="sticky top-0 z-30 border-b border-white/10 backdrop-blur-xl bg-neutral-950/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Earnings</h1>
-              <p className="text-sm text-muted-foreground">Your revenue and withdrawal history</p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <div className="h-px w-4 bg-amber-500/40" />
+                <span className="text-[9px] font-mono text-amber-500/50 tracking-widest uppercase">Creator.Studio</span>
+              </div>
+              <h1 className="text-lg font-bold font-mono tracking-tight text-white">Earnings</h1>
             </div>
-            <Button
+            <button
               onClick={() => { setShowWithdrawModal(true); setWithdrawError(""); setWithdrawSuccess(""); }}
               disabled={!wallet || wallet.balance < 1000}
-              size="sm"
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Banknote className="w-4 h-4 mr-1" />
+              <Banknote className="w-3.5 h-3.5" />
               Withdraw
-            </Button>
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-8 space-y-6">
-        {/* Financial Overview Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Balance */}
-          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-md p-4 sm:p-5">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Available</span>
-                <Wallet className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-amber-400">
-                {(wallet?.balance || 0).toLocaleString()}
-                <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">TZS</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Total Earned */}
-          <div className="relative overflow-hidden rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-md p-4 sm:p-5">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Total Earned</span>
-                <TrendingUp className="w-4 h-4 text-green-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight">
-                {(wallet?.totalEarned || 0).toLocaleString()}
-                <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">TZS</span>
+      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-8 space-y-5">
+        {/* Wallet Overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { index: "01", label: "Available Balance", value: wallet?.balance || 0, icon: Wallet, accent: true },
+            { index: "02", label: "Total Earned", value: wallet?.totalEarned || 0, icon: TrendingUp, accent: false },
+            { index: "03", label: "Withdrawn", value: wallet?.totalWithdrawn || 0, icon: Banknote, accent: false },
+            { index: "04", label: "Platform Fees (15%)", value: wallet?.totalFees || 0, icon: CreditCard, accent: false },
+          ].map((s) => (
+            <div key={s.label} className={`border p-4 relative group hover:border-amber-500/20 transition-colors ${s.accent ? "border-amber-500/25 bg-amber-500/3" : "border-white/10 bg-neutral-950"}`}>
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-1">{s.index}</div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className={`text-2xl font-bold font-mono ${s.accent ? "text-amber-400" : "text-white"}`}>
+                    {s.value.toLocaleString()}
+                    <span className="text-[10px] font-normal text-white/30 ml-1">TZS</span>
+                  </div>
+                  <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider mt-0.5">{s.label}</div>
+                </div>
+                <s.icon className="w-4 h-4 text-amber-400/40 mt-1" />
               </div>
             </div>
-          </div>
-
-          {/* Total Withdrawn */}
-          <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-md p-4 sm:p-5">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Withdrawn</span>
-                <ArrowUpFromLine className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight">
-                {(wallet?.totalWithdrawn || 0).toLocaleString()}
-                <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">TZS</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Platform Fees */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4 sm:p-5">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Platform Fees</span>
-                <CreditCard className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-muted-foreground">
-                {platformFees.toLocaleString()}
-                <span className="text-[10px] sm:text-xs font-normal ml-1">TZS</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground/60 mt-1">15% commission</p>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* nTZS On-Chain Balance */}
+        {/* nTZS On-Chain */}
         {wallet?.ntzsBalance !== null && wallet?.ntzsBalance !== undefined && (
-          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-500/5 to-pink-500/5 backdrop-blur-md p-5">
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-400/20 to-transparent" />
-            <div className="relative flex items-center justify-between">
+          <div className="border border-white/10 bg-neutral-950 relative p-5">
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/20" />
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center">
-                  <PiggyBank className="w-5 h-5 text-purple-400" />
+                <div className="w-9 h-9 border border-white/10 bg-white/3 flex items-center justify-center">
+                  <PiggyBank className="w-4 h-4 text-amber-400/60" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">nTZS On-Chain Balance</p>
-                  <p className="text-[11px] text-muted-foreground font-mono truncate max-w-[300px]">{wallet?.ntzsWalletAddress}</p>
+                  <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">NTZS.ON-CHAIN</div>
+                  <p className="text-[10px] font-mono text-white/30 truncate max-w-[280px]">{wallet?.ntzsWalletAddress}</p>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-purple-400">{wallet.ntzsBalance.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">TZS</span></div>
+                <div className="text-lg font-bold font-mono text-amber-400">{wallet.ntzsBalance.toLocaleString()}</div>
+                <div className="text-[9px] font-mono text-white/20 uppercase tracking-wider">TZS</div>
               </div>
             </div>
           </div>
         )}
 
         {/* Transaction History */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md bg-card/50">
-          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-          <div className="relative p-5">
+        <div className="border border-white/10 bg-neutral-950 relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/20" />
+          <div className="p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <h2 className="text-base font-semibold">Transaction History</h2>
-              <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/10">
+              <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest">TX.HISTORY</div>
+              <div className="flex items-center gap-1">
                 {(["all", "earning", "withdrawal"] as const).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setTxFilter(filter)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      txFilter === filter ? "bg-amber-500/20 text-amber-400" : "text-muted-foreground hover:text-foreground"
+                    className={`px-3 py-1.5 text-[9px] font-mono font-semibold uppercase tracking-widest border transition-all ${
+                      txFilter === filter ? "border-amber-500 bg-amber-500 text-black" : "border-white/15 text-white/40 hover:border-amber-500/40 hover:text-white bg-transparent"
                     }`}
                   >
                     {filter === "all" ? "All" : filter === "earning" ? "Earnings" : "Withdrawals"}
-                    <span className="ml-1 text-[10px] opacity-60">
+                    <span className="ml-1 opacity-60">
                       {filter === "all" ? transactions.length : filter === "earning" ? earningsTx.length : withdrawalTx.length}
                     </span>
                   </button>
@@ -271,44 +175,39 @@ export default function EarningsPage() {
 
             {filteredTx.length === 0 ? (
               <div className="text-center py-10">
-                <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No transactions yet</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">
-                  {txFilter === "all" ? "Earnings will appear when fans purchase your content" : `No ${txFilter}s found`}
+                <Clock className="w-7 h-7 text-white/10 mx-auto mb-3" />
+                <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">NO.TRANSACTIONS</p>
+                <p className="text-sm font-mono text-white/30 mt-1">
+                  {txFilter === "all" ? "Earnings appear when fans purchase your content" : `No ${txFilter}s found`}
                 </p>
               </div>
             ) : (
               <div className="space-y-1">
                 {filteredTx.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
+                  <div key={tx.id} className="flex items-center justify-between p-3 border border-white/5 hover:border-white/10 hover:bg-white/[0.01] transition-all">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        tx.type === "earning" ? "bg-green-500/15 text-green-400" :
-                        tx.type === "withdrawal" ? "bg-blue-500/15 text-blue-400" :
-                        "bg-neutral-500/15 text-neutral-400"
+                      <div className={`w-7 h-7 flex items-center justify-center border text-[11px] font-mono ${
+                        tx.type === "earning" ? "border-green-500/30 bg-green-500/8 text-green-400" :
+                        tx.type === "withdrawal" ? "border-red-500/30 bg-red-500/8 text-red-400" :
+                        "border-white/10 text-white/30"
                       }`}>
-                        {tx.type === "earning" ? <ArrowDownToLine className="w-4 h-4" /> :
-                         tx.type === "withdrawal" ? <ArrowUpFromLine className="w-4 h-4" /> :
-                         <Coins className="w-4 h-4" />}
+                        {tx.type === "earning" ? "▼" : tx.type === "withdrawal" ? "▲" : "○"}
                       </div>
                       <div>
-                        <div className="text-sm font-medium capitalize">{tx.type}</div>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <span>{tx.description || "—"}</span>
-                          <span>·</span>
-                          <span>{new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                        <div className="text-[11px] font-mono font-semibold text-white/70 capitalize">{tx.type}</div>
+                        <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider">
+                          {tx.description || new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm font-semibold ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
+                      <div className={`text-sm font-bold font-mono ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
                         {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} TZS
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        <span className={`inline-flex items-center gap-0.5 ${tx.status === "completed" ? "text-green-400/60" : tx.status === "pending" ? "text-yellow-400/60" : "text-muted-foreground/40"}`}>
-                          {tx.status === "completed" ? <CheckCircle className="w-2.5 h-2.5" /> : <AlertCircle className="w-2.5 h-2.5" />}
-                          {tx.status}
-                        </span>
+                      <div className={`text-[9px] font-mono uppercase tracking-wider ${
+                        tx.status === "completed" ? "text-green-400/50" : tx.status === "pending" ? "text-yellow-400/50" : "text-white/20"
+                      }`}>
+                        {tx.status}
                       </div>
                     </div>
                   </div>
@@ -322,53 +221,46 @@ export default function EarningsPage() {
       {/* Withdraw Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)} />
-          <div className="relative w-full max-w-md mx-4 rounded-2xl border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
-            <div className="relative p-6">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)} />
+          <div className="relative w-full max-w-md mx-4 border border-white/15 bg-neutral-950 overflow-hidden">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/50" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/50" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/50" />
+            <div className="p-6">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-semibold">Withdraw to M-Pesa</h3>
-                <button onClick={() => setShowWithdrawModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
+                <div>
+                  <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">WALLET.WITHDRAW</div>
+                  <h3 className="text-base font-bold font-mono text-white tracking-tight">Withdraw Earnings</h3>
+                </div>
+                <button onClick={() => setShowWithdrawModal(false)} className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all font-mono">×</button>
               </div>
               {withdrawSuccess ? (
-                <div className="text-center py-4">
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-green-500/15 flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-green-400" />
-                  </div>
-                  <p className="text-sm text-green-400 font-medium">{withdrawSuccess}</p>
-                  <Button onClick={() => setShowWithdrawModal(false)} className="mt-6 bg-white/10 hover:bg-white/15 text-foreground">Done</Button>
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 mx-auto mb-4 border border-green-500/30 bg-green-500/10 flex items-center justify-center text-green-400 font-mono text-xl">✓</div>
+                  <p className="text-sm font-mono text-green-400">{withdrawSuccess}</p>
+                  <button onClick={() => setShowWithdrawModal(false)} className="mt-5 inline-flex h-9 items-center px-6 border border-white/15 text-[10px] font-mono text-white/50 uppercase tracking-widest hover:border-white/30 hover:text-white transition-all">Done</button>
                 </div>
               ) : (
                 <form onSubmit={handleWithdraw} className="space-y-4">
-                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                    <p className="text-xs text-muted-foreground">Available balance</p>
-                    <p className="text-xl font-bold text-amber-400">{(wallet?.balance || 0).toLocaleString()} TZS</p>
+                  <div className="p-3 border border-amber-500/20 bg-amber-500/5 text-center">
+                    <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Available balance</p>
+                    <p className="text-xl font-bold font-mono text-amber-400">{(wallet?.balance || 0).toLocaleString()} TZS</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Amount (TZS)</label>
-                    <div className="relative">
-                      <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input type="number" placeholder="5,000" min={5000} max={wallet?.balance || 0} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} required className="pl-10 bg-white/5 border-white/10 focus:border-amber-500/50" />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">Min: 5,000 TZS</p>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Amount (TZS)</label>
+                    <Input type="number" placeholder="5,000" min={5000} max={wallet?.balance || 0} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} required className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50" />
+                    <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">Min: 5,000 TZS</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">M-Pesa Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input type="tel" placeholder="0712345678" value={withdrawPhone} onChange={(e) => setWithdrawPhone(e.target.value)} required className="pl-10 bg-white/5 border-white/10 focus:border-amber-500/50" />
-                    </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Mobile Money Number</label>
+                    <Input type="tel" placeholder="0712345678" value={withdrawPhone} onChange={(e) => setWithdrawPhone(e.target.value)} required className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50" />
+                    <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">M-Pesa, Airtel Money, Mixx by Yas, or HaloPesa</p>
                   </div>
-                  {withdrawError && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">{withdrawError}</div>}
-                  <Button type="submit" disabled={withdrawLoading || !withdrawAmount || !withdrawPhone} className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20 disabled:opacity-50">
-                    {withdrawLoading ? (
-                      <div className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing...</div>
-                    ) : (
-                      <><Banknote className="w-4 h-4 mr-1.5" />Withdraw {withdrawAmount ? `${parseInt(withdrawAmount).toLocaleString()} TZS` : ""}</>
-                    )}
-                  </Button>
+                  {withdrawError && <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[11px] font-mono">{withdrawError}</div>}
+                  <button type="submit" disabled={withdrawLoading || !withdrawAmount || !withdrawPhone} className="w-full h-10 inline-flex items-center justify-center bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {withdrawLoading ? "Processing..." : `Withdraw ${withdrawAmount ? `${parseInt(withdrawAmount).toLocaleString()} TZS` : ""}`}
+                  </button>
                 </form>
               )}
             </div>
