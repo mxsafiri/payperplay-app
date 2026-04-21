@@ -47,6 +47,29 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <style dangerouslySetInnerHTML={{ __html: getThemeCss() }} />
+        <style dangerouslySetInnerHTML={{ __html: `
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.anim-fade-up    { animation: fadeUp    0.65s ease both; }
+.anim-slide-left { animation: slideLeft 0.65s ease both; }
+.anim-slide-right{ animation: slideRight 0.65s ease both; }
+.anim-scale-in   { animation: scaleIn   0.55s ease both; }
+.reveal-hidden   { opacity: 0; }
+        ` }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

@@ -13,12 +13,7 @@ interface LibraryContent {
   title: string;
   category: string;
   priceTzs: number;
-  creator: {
-    id: string;
-    handle: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-  };
+  creator: { id: string; handle: string; displayName: string | null; avatarUrl: string | null; };
   grantedAt: string;
 }
 
@@ -29,28 +24,16 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isPending && !session) {
-      router.push("/login");
-      return;
-    }
-
-    if (session) {
-      fetchLibrary();
-    }
+    if (!isPending && !session) { router.push("/login"); return; }
+    if (session) fetchLibrary();
   }, [session, isPending, router]);
 
   const fetchLibrary = async () => {
     try {
       const response = await fetch("/api/library");
-      if (response.ok) {
-        const data = await response.json();
-        setContent(data.content || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch library:", error);
-    } finally {
-      setLoading(false);
-    }
+      if (response.ok) { const data = await response.json(); setContent(data.content || []); }
+    } catch (error) { console.error("Failed to fetch library:", error); }
+    finally { setLoading(false); }
   };
 
   const getCreatorImage = (creatorId: string) => {
@@ -60,10 +43,10 @@ export default function LibraryPage() {
 
   if (isPending || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading library...</p>
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="relative w-10 h-10">
+          <div className="absolute inset-0 border border-amber-500/30 animate-spin" />
+          <div className="absolute inset-1 border border-amber-500/20 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
         </div>
       </div>
     );
@@ -71,84 +54,70 @@ export default function LibraryPage() {
 
   return (
     <FanShell title="My Library" subtitle="Content you've purchased">
-        {content.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">📚</div>
-            <h3 className="text-xl font-semibold mb-2">Your library is empty</h3>
-            <p className="text-muted-foreground mb-6">
-              Start discovering and purchasing exclusive content from creators
-            </p>
-            <Link href="/feed">
-              <button className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90">
-                Browse Content
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {content.map((item) => (
-              <Link key={item.id} href={`/content/${item.id}`}>
-                <div className="group cursor-pointer">
-                  {/* Thumbnail */}
-                  <div className="relative aspect-portrait overflow-hidden rounded-lg bg-muted mb-3">
-                    <Image
-                      src={getCreatorImage(item.creator.id)}
-                      alt={item.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    
-                    {/* Owned Badge */}
-                    <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-green-500/90 backdrop-blur text-white text-xs font-semibold">
-                      ✓ Owned
-                    </div>
+      {content.length === 0 ? (
+        <div className="text-center py-16 border border-dashed border-white/10">
+          <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest mb-2">LIBRARY.EMPTY</p>
+          <p className="font-mono text-sm text-white/40 mb-5">
+            Start discovering and purchasing exclusive content from creators
+          </p>
+          <Link href="/feed"
+            className="inline-flex h-9 items-center px-6 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors">
+            Browse Content
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {content.map((item) => (
+            <Link key={item.id} href={`/content/${item.id}`}
+              className="group block border border-white/10 bg-neutral-950 hover:border-amber-500/30 transition-all amber-glow-hover overflow-hidden">
+              <div className="relative aspect-video bg-neutral-900">
+                <Image
+                  src={item.creator.avatarUrl?.startsWith("http") ? item.creator.avatarUrl : getCreatorImage(item.creator.id)}
+                  alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-                    {/* Play Button Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    </div>
+                {/* Owned badge */}
+                <div className="absolute top-2 right-2">
+                  <span className="px-2 py-0.5 bg-green-500/80 text-black text-[9px] font-mono font-semibold uppercase">✓ Owned</span>
+                </div>
 
-                    {/* Creator Info */}
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <div className="flex items-center gap-2">
-                        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white">
-                          <Image
-                            src={item.creator.avatarUrl || getCreatorImage(item.creator.id)}
-                            alt={item.creator.displayName || item.creator.handle}
-                            fill
-                            className="object-cover"
-                            sizes="32px"
-                          />
-                        </div>
-                        <span className="text-white text-sm font-medium truncate">
-                          {item.creator.displayName || `@${item.creator.handle}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content Info */}
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{item.category}</span>
-                      <span>•</span>
-                      <span>Purchased {new Date(item.grantedAt).toLocaleDateString()}</span>
-                    </div>
+                {/* Play overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-12 h-12 bg-amber-500 flex items-center justify-center">
+                    <span className="text-black font-mono font-black text-lg ml-0.5">▶</span>
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
+
+                {/* Creator info */}
+                <div className="absolute bottom-2 left-2 right-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 border border-amber-500/40 bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-amber-400 text-[9px] font-bold font-mono">
+                        {(item.creator.displayName || item.creator.handle).charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="text-white text-[10px] font-mono font-medium truncate">
+                      {item.creator.displayName || `@${item.creator.handle}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3">
+                <h3 className="font-mono font-medium text-xs text-white/70 line-clamp-2 group-hover:text-white transition-colors tracking-wide">
+                  {item.title}
+                </h3>
+                <div className="flex items-center gap-2 mt-1.5 text-[9px] font-mono text-white/30 uppercase tracking-wider">
+                  <span>{item.category}</span>
+                  <span>·</span>
+                  <span>Purchased {new Date(item.grantedAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </FanShell>
   );
 }

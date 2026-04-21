@@ -6,11 +6,11 @@ type PillVariant = "default" | "primary" | "secondary";
 
 const variantClasses: Record<PillVariant, string> = {
   default:
-    "border border-neutral-200 bg-white/70 text-neutral-900 dark:border-neutral-800 dark:bg-neutral-950/50 dark:text-neutral-100",
+    "border border-white/20 bg-transparent text-white/60 font-mono tracking-widest uppercase",
   primary:
-    "bg-primary-500 text-white hover:bg-primary-400 dark:bg-primary-500 dark:hover:bg-primary-400",
+    "border border-amber-500/50 bg-amber-500/10 text-amber-400 font-mono tracking-widest uppercase hover:bg-amber-500/20",
   secondary:
-    "bg-secondary-500 text-white hover:bg-secondary-400 dark:bg-secondary-500 dark:hover:bg-secondary-400",
+    "border border-pink-500/50 bg-pink-500/10 text-pink-400 font-mono tracking-widest uppercase hover:bg-pink-500/20",
 };
 
 export function Pill({
@@ -21,7 +21,7 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+        "inline-flex items-center px-3 py-1 text-[10px] font-medium",
         variantClasses[variant],
         className,
       )}

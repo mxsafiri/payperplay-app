@@ -4,30 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
-import { Film } from "lucide-react";
 import { FanShell } from "@/components/fan/FanShell";
 
-interface MediaItem {
-  id: string;
-  mediaType: string;
-  url: string | null;
-}
-
+interface MediaItem { id: string; mediaType: string; url: string | null; }
 interface ContentItem {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  priceTzs: number;
-  viewCount: number;
-  likeCount: number;
-  createdAt: string;
-  creator: {
-    id: string;
-    handle: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-  };
+  id: string; title: string; description: string | null; category: string;
+  priceTzs: number; viewCount: number; likeCount: number; createdAt: string;
+  creator: { id: string; handle: string; displayName: string | null; avatarUrl: string | null; };
   media?: MediaItem[];
 }
 
@@ -39,183 +22,137 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  useEffect(() => {
-    fetchContent();
-  }, [selectedCategory]);
+  useEffect(() => { fetchContent(); }, [selectedCategory]);
 
   const fetchContent = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedCategory !== "All") {
-        params.append("category", selectedCategory);
-      }
-
+      if (selectedCategory !== "All") params.append("category", selectedCategory);
       const response = await fetch(`/api/content?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setContent(data.content || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch content:", error);
-    } finally {
-      setLoading(false);
-    }
+      if (response.ok) { const data = await response.json(); setContent(data.content || []); }
+    } catch (error) { console.error("Failed to fetch content:", error); }
+    finally { setLoading(false); }
   };
 
   return (
     <FanShell title="Discover" subtitle="Exclusive content from your favorite creators">
-      <div className="relative">
-        <div className="absolute inset-0 -z-10">
-          <Image
-            src="/BG discover.png"
-            alt=""
-            fill
-            className="object-cover opacity-35 dark:opacity-20"
-            sizes="100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary-500/5 via-transparent to-secondary-500/5 dark:from-primary-500/10 dark:to-secondary-500/10" />
-        </div>
-
+      <div>
         {/* Category Filters */}
-        <div className="mb-8">
-          <div className="flex w-full justify-start sm:justify-center">
-            <div className="flex w-full max-w-full gap-2 overflow-x-auto pb-2 sm:pb-0">
-              {CATEGORIES.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+        <div className="mb-6">
+          <div className="flex gap-1.5 overflow-x-auto pb-2">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`flex-shrink-0 px-4 py-2 text-[10px] font-mono font-semibold uppercase tracking-widest border transition-all ${
+                  selectedCategory === category
+                    ? "border-amber-500 bg-amber-500 text-black"
+                    : "border-white/15 text-white/40 hover:border-amber-500/40 hover:text-white bg-transparent"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Content Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-portrait bg-muted rounded-lg mb-3" />
-                <div className="h-4 bg-muted rounded w-3/4 mb-2" />
-                <div className="h-3 bg-muted rounded w-1/2" />
+              <div key={i} className="border border-white/5 animate-pulse">
+                <div className="aspect-video bg-white/5" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-white/5 w-3/4" />
+                  <div className="h-2 bg-white/5 w-1/2" />
+                </div>
               </div>
             ))}
           </div>
         ) : content.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
-              <Film className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">No content yet</h3>
-            <p className="text-muted-foreground mb-6">
-              {selectedCategory === "All"
-                ? "Be the first to create content!"
-                : `No ${selectedCategory} content available yet.`}
+          <div className="text-center py-16 border border-dashed border-white/10">
+            <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest mb-2">NO.CONTENT</p>
+            <p className="font-mono text-sm text-white/40 mb-5">
+              {selectedCategory === "All" ? "Be the first to create content!" : `No ${selectedCategory} content available yet.`}
             </p>
             {session && (
-              <Link href="/creator/content/new">
-                <button className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90">
-                  Create Content
-                </button>
+              <Link href="/creator/content/new"
+                className="inline-flex h-9 items-center px-6 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors">
+                Create Content
               </Link>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {content.map((item) => {
               const thumbnail = item.media?.find((m) => m.mediaType === "thumbnail")?.url;
               const creatorName = item.creator.displayName || item.creator.handle;
               const creatorInitial = creatorName.slice(0, 1).toUpperCase();
-
               return (
-              <Link key={item.id} href={`/content/${item.id}`}>
-                <div className="group cursor-pointer">
-                  {/* Thumbnail */}
-                  <div className="relative aspect-video overflow-hidden rounded-lg bg-muted mb-3">
+                <Link key={item.id} href={`/content/${item.id}`}
+                  className="group block border border-white/10 bg-neutral-950 hover:border-amber-500/30 transition-all amber-glow-hover overflow-hidden">
+                  <div className="relative aspect-video bg-neutral-900">
                     {thumbnail ? (
-                      <Image
-                        src={thumbnail}
-                        alt={item.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
+                      <Image src={thumbnail} alt={item.title} fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 group-hover:from-amber-950/60 group-hover:to-zinc-900 transition-all duration-300">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-2xl font-bold mb-2 shadow-lg shadow-amber-500/20">
+                      <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                        <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-mono font-bold text-amber-400 text-lg mb-2">
                           {creatorInitial}
                         </div>
-                        <p className="text-white/80 text-xs font-medium px-4 text-center line-clamp-2 leading-snug">
-                          {item.title}
-                        </p>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    
-                    {/* Play Button Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+                    {/* Play overlay */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                        <svg className="w-7 h-7 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
+                      <div className="w-12 h-12 bg-amber-500 flex items-center justify-center">
+                        <span className="text-black font-mono font-black text-lg ml-0.5">▶</span>
                       </div>
                     </div>
 
-                    {/* Price Badge */}
-                    <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur text-white text-sm font-semibold">
-                      {item.priceTzs} TZS
+                    {/* Price badge */}
+                    <div className="absolute top-2 right-2">
+                      {item.priceTzs === 0 ? (
+                        <span className="px-2 py-0.5 bg-green-500/80 text-black text-[9px] font-mono font-semibold uppercase">FREE</span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white text-[9px] font-mono border border-white/20">
+                          {item.priceTzs.toLocaleString()} TZS
+                        </span>
+                      )}
                     </div>
 
-                    {/* Creator Info */}
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <div className="flex items-center gap-2">
+                    {/* Creator info */}
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <div className="flex items-center gap-1.5">
                         {item.creator.avatarUrl?.startsWith("http") ? (
-                          <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
-                            <Image
-                              src={item.creator.avatarUrl}
-                              alt={creatorName}
-                              fill
-                              className="object-cover"
-                              sizes="32px"
-                            />
+                          <div className="relative w-6 h-6 overflow-hidden border border-white/30 flex-shrink-0">
+                            <Image src={item.creator.avatarUrl} alt={creatorName} fill className="object-cover" sizes="24px" />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 rounded-full border-2 border-white flex-shrink-0 bg-amber-500 flex items-center justify-center text-white text-xs font-bold">
-                            {creatorInitial}
+                          <div className="w-6 h-6 border border-amber-500/40 bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-amber-400 text-[9px] font-bold font-mono">{creatorInitial}</span>
                           </div>
                         )}
-                        <span className="text-white text-sm font-medium truncate">
-                          {creatorName}
-                        </span>
+                        <span className="text-white text-[10px] font-mono font-medium truncate">{creatorName}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Content Info */}
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                  <div className="p-3">
+                    <h3 className="font-mono font-medium text-xs text-white/70 line-clamp-2 group-hover:text-white transition-colors tracking-wide">
                       {item.title}
                     </h3>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 mt-1.5 text-[9px] font-mono text-white/30 uppercase tracking-wider">
                       <span>{item.category}</span>
-                      <span>•</span>
-                      <span>{item.viewCount} views</span>
-                      <span>•</span>
+                      <span>·</span>
+                      <span>{item.viewCount.toLocaleString()} views</span>
+                      <span>·</span>
                       <span>{item.likeCount} likes</span>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
               );
             })}
           </div>

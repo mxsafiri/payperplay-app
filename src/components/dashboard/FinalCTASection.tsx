@@ -1,45 +1,79 @@
+"use client";
+
 import * as React from "react";
 import Image from "next/image";
 
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { Container } from "./Container";
 import { placeholderCreators } from "@/data/placeholder-creators";
 
 export function FinalCTASection() {
+  const [ref, visible] = useScrollReveal(0.1);
   const displayCreators = placeholderCreators.slice(6, 14);
 
   return (
-    <section className="relative overflow-hidden py-16">
-      <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-950" />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/15 via-transparent to-secondary-500/15 dark:from-primary-500/25 dark:to-secondary-500/20" />
+    <section
+      ref={ref as React.RefObject<HTMLElement>}
+      className="relative overflow-hidden py-16 bg-neutral-950 border-t border-white/5"
+    >
+      {/* Background */}
+      <div className="absolute inset-0 tech-grid opacity-60" />
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/6 via-transparent to-pink-500/6" />
+      <div className="absolute top-0 left-0 w-16 h-16 border-t border-l border-amber-500/30" />
+      <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-amber-500/30" />
+      <div className="absolute bottom-0 left-0 w-16 h-16 border-b border-l border-amber-500/30" />
+      <div className="absolute bottom-0 right-0 w-16 h-16 border-b border-r border-amber-500/30" />
 
       <Container className="relative">
-        {/* Creator Images Showcase */}
+        {/* Creator avatar stack */}
         <div className="mb-8 flex justify-center">
-          <div className="flex -space-x-4">
-            {displayCreators.map((creator) => (
+          <div className="flex -space-x-3">
+            {displayCreators.map((creator, i) => (
               <div
                 key={creator.id}
-                className="relative h-16 w-16 overflow-hidden rounded-full border-4 border-white dark:border-neutral-950 shadow-lg hover:scale-110 transition-transform"
+                className={`relative h-12 w-12 overflow-hidden border-2 border-neutral-950 hover:scale-110 transition-transform ${
+                  visible ? "anim-scale-in" : "reveal-hidden"
+                }`}
+                style={{ animationDelay: `${i * 50}ms` }}
               >
                 <Image
                   src={creator.image}
                   alt={creator.name}
                   fill
                   className="object-cover"
-                  sizes="64px"
+                  sizes="48px"
                 />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-neutral-200 bg-white/70 p-8 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/60 sm:p-10">
+        {/* Main CTA block */}
+        <div
+          className={`relative border border-amber-500/20 bg-neutral-950/80 p-8 backdrop-blur sm:p-10 overflow-hidden ${
+            visible ? "anim-fade-up" : "reveal-hidden"
+          }`}
+          style={{ animationDelay: "420ms" }}
+        >
+          <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
+          <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/50" />
+          <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/50" />
+          <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/50" />
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px w-6 bg-amber-500/40" />
+            <span className="text-[10px] font-mono text-amber-500/70 tracking-widest uppercase">
+              JOIN.THE.MOVEMENT
+            </span>
+            <div className="flex-1 h-px bg-amber-500/10" />
+          </div>
+
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-3xl">
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold font-mono tracking-tight text-white sm:text-3xl">
                 Don't Miss a Beat
               </h2>
-              <p className="max-w-xl text-sm text-neutral-600 dark:text-neutral-300 sm:text-base">
+              <p className="max-w-xl text-xs font-mono text-white/40 sm:text-sm leading-relaxed">
                 Join thousands of fans enjoying exclusive content from Tanzania's top creators.
                 Sign up now and start playing in a creator-first economy.
               </p>
@@ -49,17 +83,25 @@ export function FinalCTASection() {
               <a
                 id="get-started"
                 href="/signup"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-primary-500 px-6 text-sm font-semibold text-white hover:bg-primary-400 dark:bg-primary-500 dark:hover:bg-primary-400"
+                className="group relative inline-flex h-11 items-center justify-center bg-amber-500 px-7 text-xs font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
               >
-                Get Started
+                <span className="absolute -top-px -left-px w-2 h-2 border-t border-l border-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="absolute -bottom-px -right-px w-2 h-2 border-b border-r border-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                Get Started →
               </a>
               <a
                 href="#start-playing"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-200 bg-white/70 px-6 text-sm font-semibold text-neutral-900 backdrop-blur hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-100 dark:hover:bg-neutral-950"
+                className="inline-flex h-11 items-center justify-center border border-white/20 bg-transparent px-7 text-xs font-mono font-semibold text-white/70 uppercase tracking-widest hover:border-amber-500/40 hover:text-white transition-all"
               >
                 Start Playing
               </a>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 mt-8 opacity-30">
+            <span className="text-[9px] font-mono text-white">∞</span>
+            <div className="flex-1 h-px bg-white/20" />
+            <span className="text-[9px] font-mono text-white/60">PAYPERPLAY.PROTOCOL</span>
           </div>
         </div>
       </Container>

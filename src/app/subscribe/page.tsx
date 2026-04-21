@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Shield, Clock, CreditCard, Phone, CheckCircle, Loader2, AlertTriangle, Crown } from "lucide-react";
 
 export default function SubscribePage() {
   const router = useRouter();
@@ -16,106 +14,77 @@ export default function SubscribePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchStatus();
-  }, []);
+  useEffect(() => { fetchStatus(); }, []);
 
   const fetchStatus = async () => {
     try {
       const res = await fetch("/api/subscription/status");
-      if (res.ok) {
-        const data = await res.json();
-        setSubStatus(data);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
+      if (res.ok) setSubStatus(await res.json());
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
   };
 
   const handleStartTrial = async () => {
-    setActivatingTrial(true);
-    setError("");
-    setMessage("");
+    setActivatingTrial(true); setError(""); setMessage("");
     try {
       const res = await fetch("/api/subscription/trial", { method: "POST" });
       const data = await res.json();
-      if (res.ok) {
-        setMessage(data.message || "Trial activated!");
-        setTimeout(() => router.push("/"), 2000);
-      } else {
-        setError(data.error || "Failed to activate trial");
-      }
-    } catch {
-      setError("Something went wrong");
-    } finally {
-      setActivatingTrial(false);
-    }
+      if (res.ok) { setMessage(data.message || "Trial activated!"); setTimeout(() => router.push("/"), 2000); }
+      else setError(data.error || "Failed to activate trial");
+    } catch { setError("Something went wrong"); }
+    finally { setActivatingTrial(false); }
   };
 
   const handleSubscribe = async () => {
-    if (!phoneNumber.trim()) {
-      setError("Please enter your M-Pesa phone number");
-      return;
-    }
-    setPaying(true);
-    setError("");
-    setMessage("");
+    if (!phoneNumber.trim()) { setError("Please enter your M-Pesa phone number"); return; }
+    setPaying(true); setError(""); setMessage("");
     try {
       const res = await fetch("/api/subscription/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phoneNumber }),
       });
       const data = await res.json();
       if (res.ok) {
         setMessage(data.instructions || "Payment request sent! Check your phone to confirm.");
-        // Poll for status
         const pollInterval = setInterval(async () => {
           const statusRes = await fetch("/api/subscription/status");
           if (statusRes.ok) {
             const statusData = await statusRes.json();
-            if (statusData.hasAccess) {
-              clearInterval(pollInterval);
-              setMessage("Subscription activated! Redirecting...");
-              setTimeout(() => router.push("/"), 2000);
-            }
+            if (statusData.hasAccess) { clearInterval(pollInterval); setMessage("Subscription activated! Redirecting..."); setTimeout(() => router.push("/"), 2000); }
           }
         }, 3000);
-        // Stop polling after 2 minutes
         setTimeout(() => clearInterval(pollInterval), 120000);
-      } else {
-        setError(data.error || "Payment failed");
-      }
-    } catch {
-      setError("Something went wrong");
-    } finally {
-      setPaying(false);
-    }
+      } else setError(data.error || "Payment failed");
+    } catch { setError("Something went wrong"); }
+    finally { setPaying(false); }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="relative w-10 h-10">
+          <div className="absolute inset-0 border border-amber-500/30 animate-spin" />
+          <div className="absolute inset-1 border border-amber-500/20 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+        </div>
       </div>
     );
   }
 
-  // Already has access — redirect
   if (subStatus?.hasAccess && subStatus?.status !== "grace") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-          <h1 className="text-2xl font-bold">You have an active subscription!</h1>
-          <p className="text-muted-foreground">
-            {subStatus.status === "trial"
-              ? `Free trial — ${subStatus.daysRemaining} days remaining`
-              : `Active — ${subStatus.daysRemaining} days remaining`}
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="text-center border border-green-500/20 bg-green-500/3 p-10 relative max-w-sm mx-4">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-green-500/40" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-green-500/40" />
+          <div className="w-12 h-12 mx-auto mb-4 border border-green-500/30 bg-green-500/10 flex items-center justify-center text-green-400 font-mono text-xl">✓</div>
+          <p className="text-[9px] font-mono text-green-500/50 uppercase tracking-widest mb-1">SUBSCRIPTION.ACTIVE</p>
+          <h1 className="text-lg font-bold font-mono text-white mb-2">Active Subscription!</h1>
+          <p className="text-[10px] font-mono text-white/40 uppercase tracking-wider mb-5">
+            {subStatus.status === "trial" ? `Free trial — ${subStatus.daysRemaining} days remaining` : `Active — ${subStatus.daysRemaining} days remaining`}
           </p>
-          <Button onClick={() => router.push("/")}>Browse Content</Button>
+          <button onClick={() => router.push("/")}
+            className="inline-flex h-9 items-center px-6 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors">
+            Browse Content →
+          </button>
         </div>
       </div>
     );
@@ -126,21 +95,34 @@ export default function SubscribePage() {
   const isExpired = subStatus?.status === "expired";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-12">
+    <div className="min-h-screen bg-neutral-950">
+      <div className="fixed inset-0 tech-grid opacity-30 pointer-events-none" />
+      <div className="fixed top-0 left-0 w-12 h-12 border-t border-l border-amber-500/20 pointer-events-none" />
+      <div className="fixed top-0 right-0 w-12 h-12 border-t border-r border-amber-500/20 pointer-events-none" />
+
+      <div className="relative z-10 max-w-lg mx-auto px-4 py-12">
+
         {/* Header */}
-        <div className="text-center mb-10">
-          <Crown className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold mb-2">
-            {isGrace
-              ? "Your subscription has expired"
-              : isExpired
-              ? "Renew your subscription"
-              : "Unlock PayPerPlay"}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2.5 mb-6">
+            <div className="w-8 h-8 bg-amber-500 flex items-center justify-center">
+              <span className="text-black font-mono font-black text-sm">▶</span>
+            </div>
+            <span className="text-white font-mono font-bold text-sm tracking-widest uppercase italic -skew-x-6 inline-block">PayPerPlay</span>
+          </div>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="h-px w-8 bg-amber-500/40" />
+            <span className="text-[9px] font-mono text-amber-500/60 tracking-widest uppercase">
+              {isGrace ? "SUBSCRIPTION.EXPIRED" : isExpired ? "SUBSCRIPTION.RENEW" : "SUBSCRIPTION.UNLOCK"}
+            </span>
+            <div className="h-px w-8 bg-amber-500/40" />
+          </div>
+          <h1 className="text-2xl font-bold font-mono tracking-tight text-white">
+            {isGrace ? "Subscription Expired" : isExpired ? "Renew Subscription" : "Unlock PayPerPlay"}
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-[11px] font-mono text-white/40 mt-2 uppercase tracking-wider">
             {isGrace
-              ? `You're in a grace period — ${subStatus.daysRemaining} day(s) left. Renew now to keep watching!`
+              ? `Grace period — ${subStatus.daysRemaining} day(s) left. Renew now!`
               : isExpired
               ? "Your access has expired. Subscribe to continue watching."
               : "Get unlimited access to all free content on the platform"}
@@ -149,124 +131,109 @@ export default function SubscribePage() {
 
         {/* Grace period warning */}
         {isGrace && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-semibold text-yellow-600 dark:text-yellow-400">Grace Period Active</p>
-              <p className="text-sm text-muted-foreground">
-                You still have access for {subStatus.daysRemaining} more day(s). Renew now to avoid losing access.
-              </p>
+          <div className="border border-yellow-500/30 bg-yellow-500/5 p-4 mb-5">
+            <div className="flex items-start gap-3">
+              <span className="text-yellow-500 font-mono text-lg flex-shrink-0">⚠</span>
+              <div>
+                <p className="text-xs font-mono font-semibold text-yellow-400 uppercase tracking-wider">Grace Period Active</p>
+                <p className="text-[10px] font-mono text-white/40 mt-1">
+                  You still have access for {subStatus.daysRemaining} more day(s). Renew now to avoid losing access.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
         {/* What you get */}
-        <div className="bg-card border rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">What you get</h2>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium">Unlimited free content</p>
-                <p className="text-sm text-muted-foreground">Watch all free content from every creator on the platform</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium">Premium content access</p>
-                <p className="text-sm text-muted-foreground">Pay per view for premium creator content at their set prices</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium">7-day access + 2-day grace</p>
-                <p className="text-sm text-muted-foreground">Each subscription gives you 7 days of access, plus a 2-day grace period to renew</p>
-              </div>
+        <div className="border border-white/10 bg-neutral-950 relative mb-4">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
+          <div className="p-5">
+            <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-3">SUBSCRIPTION.BENEFITS</div>
+            <div className="space-y-3">
+              {[
+                { icon: "◎", title: "Unlimited free content", desc: "Watch all free content from every creator on the platform" },
+                { icon: "◈", title: "Premium content access", desc: "Pay per view for premium creator content at their set prices" },
+                { icon: "◐", title: "7-day access + 2-day grace", desc: "Each subscription gives you 7 days of access, plus a 2-day grace period to renew" },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} className="flex items-start gap-3">
+                  <span className="text-amber-400/60 font-mono mt-0.5 flex-shrink-0">{icon}</span>
+                  <div>
+                    <p className="text-xs font-mono font-semibold text-white/70 uppercase tracking-wider">{title}</p>
+                    <p className="text-[9px] font-mono text-white/30 mt-0.5 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Pricing */}
-        <div className="bg-card border rounded-xl p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Weekly Access Pass</h2>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-primary">500 TZS</p>
-              <p className="text-xs text-muted-foreground">per week</p>
+        {/* Pricing + payment */}
+        <div className="border border-amber-500/20 bg-amber-500/3 relative mb-4">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40" />
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">WEEKLY.ACCESS</div>
+                <h2 className="text-sm font-semibold font-mono text-white">Weekly Access Pass</h2>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold font-mono text-amber-400">500</div>
+                <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest">TZS / week</div>
+              </div>
             </div>
-          </div>
 
-          {/* Free trial option */}
-          {showTrialOption && (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-green-600 dark:text-green-400">🎉 30 Days Free!</p>
-                  <p className="text-sm text-muted-foreground">Start with a free month — no payment required</p>
+            {/* Free trial option */}
+            {showTrialOption && (
+              <div className="border border-green-500/25 bg-green-500/5 p-4 mb-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-mono font-semibold text-green-400 uppercase tracking-wider">30 Days Free!</p>
+                    <p className="text-[9px] font-mono text-white/30 mt-0.5">Start with a free month — no payment required</p>
+                  </div>
+                  <button onClick={handleStartTrial} disabled={activatingTrial}
+                    className="inline-flex h-8 items-center px-4 bg-green-600 text-[9px] font-mono font-semibold text-white uppercase tracking-widest hover:bg-green-500 transition-colors disabled:opacity-50 flex-shrink-0">
+                    {activatingTrial ? "..." : "Start Trial"}
+                  </button>
                 </div>
-                <Button
-                  onClick={handleStartTrial}
-                  disabled={activatingTrial}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {activatingTrial ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Free Trial"}
-                </Button>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Pay with M-Pesa */}
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">
-              {showTrialOption ? "Or pay now:" : "Pay with M-Pesa:"}
-            </p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="tel"
-                  placeholder="0712 345 678"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="pl-10"
-                />
+            {/* M-Pesa pay */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
+                {showTrialOption ? "Or pay now with M-Pesa:" : "Pay with M-Pesa:"}
+              </p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 font-mono text-xs">📱</span>
+                  <Input type="tel" placeholder="0712 345 678" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="pl-8 bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none" />
+                </div>
+                <button onClick={handleSubscribe} disabled={paying}
+                  className="inline-flex h-9 items-center px-5 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50 flex-shrink-0">
+                  {paying ? "..." : "Pay 500 TZS"}
+                </button>
               </div>
-              <Button onClick={handleSubscribe} disabled={paying}>
-                {paying ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Pay 500 TZS
-                  </>
-                )}
-              </Button>
             </div>
           </div>
         </div>
 
         {/* Messages */}
         {message && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4 text-center">
-            <CheckCircle className="w-5 h-5 text-green-500 inline mr-2" />
-            <span className="text-green-600 dark:text-green-400">{message}</span>
+          <div className="p-3 border border-green-500/20 bg-green-500/5 mb-3">
+            <p className="text-[11px] font-mono text-green-400">✓ {message}</p>
           </div>
         )}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4 text-center">
-            <AlertTriangle className="w-5 h-5 text-red-500 inline mr-2" />
-            <span className="text-red-600 dark:text-red-400">{error}</span>
+          <div className="p-3 border border-red-500/20 bg-red-500/5 mb-3">
+            <p className="text-[11px] font-mono text-red-400">⚠ {error}</p>
           </div>
         )}
 
-        {/* Back to browse */}
         <div className="text-center">
-          <button
-            onClick={() => router.push("/")}
-            className="text-sm text-muted-foreground hover:text-foreground underline"
-          >
+          <button onClick={() => router.push("/")}
+            className="text-[10px] font-mono text-white/25 uppercase tracking-widest hover:text-white/50 transition-colors underline underline-offset-4">
             Browse content without subscribing
           </button>
         </div>

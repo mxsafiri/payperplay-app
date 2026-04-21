@@ -16,7 +16,7 @@ export function CategoryFilters({
 }) {
   return (
     <div className="flex w-full justify-start sm:justify-center">
-      <div className="flex w-full max-w-full gap-2 overflow-x-auto pb-2 sm:pb-0">
+      <div className="flex w-full max-w-full gap-1.5 overflow-x-auto pb-2 sm:pb-0">
         {categories.map((c) => {
           const active = c.id === value;
           return (
@@ -25,10 +25,10 @@ export function CategoryFilters({
               type="button"
               onClick={() => onChange(c.id)}
               className={cn(
-                "inline-flex h-10 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors",
+                "inline-flex h-8 shrink-0 items-center border px-4 text-[10px] font-mono font-medium uppercase tracking-widest transition-all",
                 active
-                  ? "border-primary-500 bg-primary-500 text-white"
-                  : "border-neutral-200 bg-white/60 text-neutral-800 hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-200 dark:hover:bg-neutral-950",
+                  ? "border-amber-500 bg-amber-500 text-black"
+                  : "border-white/15 bg-transparent text-white/40 hover:border-amber-500/40 hover:text-white",
               )}
             >
               {c.label}

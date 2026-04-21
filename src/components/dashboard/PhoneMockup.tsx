@@ -3,41 +3,30 @@
 import * as React from "react";
 import { useEffect, useState, useRef } from "react";
 
-import { cn } from "@/lib/cn";
-
 function Bubble({
   align = "left",
-  accent = "primary",
+  accent = "amber",
   visible,
   children,
 }: {
   align?: "left" | "right";
-  accent?: "primary" | "secondary";
+  accent?: "amber" | "pink";
   visible: boolean;
   children: React.ReactNode;
 }) {
   const isRight = align === "right";
-  const accentClass =
-    accent === "secondary"
-      ? "bg-secondary-500/15 text-secondary-700 dark:bg-secondary-500/20 dark:text-secondary-200"
-      : "bg-primary-500/15 text-primary-700 dark:bg-primary-500/20 dark:text-primary-200";
+  const bubbleClass =
+    accent === "pink"
+      ? "bg-pink-500/15 text-pink-300 border border-pink-500/20"
+      : "bg-amber-500/15 text-amber-300 border border-amber-500/20";
 
   return (
     <div
-      className={cn(
-        "flex transition-all duration-500",
-        isRight ? "justify-end" : "justify-start",
-        visible
-          ? "opacity-100 translate-y-0 scale-100"
-          : "opacity-0 translate-y-4 scale-95",
-      )}
+      className={`flex transition-all duration-500 ${isRight ? "justify-end" : "justify-start"} ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+      }`}
     >
-      <div
-        className={cn(
-          "w-fit max-w-xs rounded-2xl px-4 py-3 text-sm font-medium sm:max-w-sm",
-          accentClass,
-        )}
-      >
+      <div className={`w-fit max-w-[80%] px-3 py-2 text-[11px] font-mono font-medium ${bubbleClass}`}>
         {children}
       </div>
     </div>
@@ -45,10 +34,10 @@ function Bubble({
 }
 
 const MESSAGES = [
-  { text: "New drop was insane 🔥", align: "left" as const, accent: "primary" as const },
-  { text: "Can you do a behind-the-scenes?", align: "right" as const, accent: "secondary" as const },
-  { text: "Yes! Q&A after the next play.", align: "left" as const, accent: "primary" as const },
-  { text: "Sending a gift now 🎁", align: "right" as const, accent: "secondary" as const },
+  { text: "New drop was insane 🔥", align: "left" as const, accent: "amber" as const },
+  { text: "Can you do a behind-the-scenes?", align: "right" as const, accent: "pink" as const },
+  { text: "Yes! Q&A after the next play.", align: "left" as const, accent: "amber" as const },
+  { text: "Sending a gift now 🎁", align: "right" as const, accent: "pink" as const },
 ];
 
 export function PhoneMockup() {
@@ -71,28 +60,19 @@ export function PhoneMockup() {
     const runCycle = () => {
       if (cancelled) return;
       timers = [];
-
-      // Reset everything
       setVisibleCount(0);
       setShowHeart(false);
       setShowThumb(false);
-
-      // Stagger messages every 600ms
       MESSAGES.forEach((_, i) => {
         schedule(() => setVisibleCount(i + 1), 400 + i * 600);
       });
-
-      // Pop in reactions
       schedule(() => setShowHeart(true), 800);
       schedule(() => setShowThumb(true), 1800);
-
-      // After all messages shown, wait 3s then fade out and restart
       const totalDuration = 400 + MESSAGES.length * 600 + 3000;
       schedule(() => {
         setVisibleCount(0);
         setShowHeart(false);
         setShowThumb(false);
-        // Wait for fade-out transition, then restart
         schedule(runCycle, 600);
       }, totalDuration);
     };
@@ -116,43 +96,47 @@ export function PhoneMockup() {
   }, []);
 
   return (
-    <div ref={ref} className="relative mx-auto w-full max-w-sm">
-      {/* Floating reaction: Heart */}
+    <div ref={ref} className="relative mx-auto w-full max-w-xs">
+      {/* Floating reaction chips */}
       <div
-        className={cn(
-          "absolute -left-6 top-10 hidden h-12 w-12 items-center justify-center rounded-2xl bg-secondary-500/20 text-xl dark:bg-secondary-500/25 lg:flex transition-all duration-500",
-          showHeart
-            ? "opacity-100 scale-100"
-            : "opacity-0 scale-0",
-        )}
+        className={`absolute -left-8 top-8 hidden lg:flex h-10 w-10 items-center justify-center border border-pink-500/30 bg-pink-500/10 text-base transition-all duration-500 ${
+          showHeart ? "opacity-100 scale-100" : "opacity-0 scale-0"
+        }`}
       >
         ❤️
       </div>
-
-      {/* Floating reaction: Thumbs up */}
       <div
-        className={cn(
-          "absolute -right-6 top-24 hidden h-12 w-12 items-center justify-center rounded-2xl bg-primary-500/20 text-xl dark:bg-primary-500/25 lg:flex transition-all duration-500",
-          showThumb
-            ? "opacity-100 scale-100"
-            : "opacity-0 scale-0",
-        )}
+        className={`absolute -right-8 top-20 hidden lg:flex h-10 w-10 items-center justify-center border border-amber-500/30 bg-amber-500/10 text-base transition-all duration-500 ${
+          showThumb ? "opacity-100 scale-100" : "opacity-0 scale-0"
+        }`}
       >
         👍
       </div>
 
-      <div className="rounded-3xl border border-neutral-200 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950/40">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-              Live Chat
+      {/* Device frame */}
+      <div className="border border-white/10 bg-neutral-950 p-2 relative">
+        {/* Corner accents */}
+        <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/50" />
+        <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-amber-500/50" />
+        <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-amber-500/50" />
+        <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/50" />
+
+        {/* Screen area */}
+        <div className="border border-white/5 bg-black p-3">
+          {/* Status bar */}
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-[8px] font-mono text-amber-500/70 tracking-widest uppercase">LIVE.CHAT</span>
             </div>
-            <div className="rounded-full bg-primary-500/10 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-500/15 dark:text-primary-200">
-              Reactions
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-mono text-pink-400/70 uppercase tracking-wider">Reactions</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-pink-500/60 animate-pulse" />
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
+          {/* Messages */}
+          <div className="space-y-2 min-h-[140px]">
             {MESSAGES.map((msg, i) => (
               <Bubble key={i} align={msg.align} accent={msg.accent} visible={i < visibleCount}>
                 {msg.text}
@@ -160,18 +144,21 @@ export function PhoneMockup() {
             ))}
           </div>
 
+          {/* Input bar */}
           <div
-            className={cn(
-              "mt-4 flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950 transition-all duration-500",
-              visibleCount >= MESSAGES.length
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-2",
-            )}
+            className={`mt-3 flex items-center gap-2 border border-white/10 bg-white/3 px-3 py-2 transition-all duration-500 ${
+              visibleCount >= MESSAGES.length ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
           >
-            <div className="h-2 w-2 rounded-full bg-secondary-500 animate-pulse" />
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-              Type a message...
-            </div>
+            <div className="h-1.5 w-1.5 rounded-full bg-amber-500/60 animate-pulse" />
+            <div className="text-[10px] font-mono text-white/25 tracking-wider">Type a message...</div>
+          </div>
+
+          {/* Bottom notation */}
+          <div className="flex items-center gap-1 mt-2 opacity-20">
+            <div className="flex-1 h-px bg-amber-500/40" />
+            <span className="text-[7px] font-mono text-amber-400 tracking-widest">PPP.REALTIME</span>
+            <div className="flex-1 h-px bg-amber-500/40" />
           </div>
         </div>
       </div>

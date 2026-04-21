@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import type { DashboardCategory, DashboardContentItem } from "@/data/dashboard";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 import { Container } from "./Container";
 import { CategoryFilters } from "./CategoryFilters";
@@ -29,10 +30,8 @@ interface DbContentItem {
 
 function getThumbnail(item: DbContentItem): string {
   if (!item.media?.length) return "";
-  // Prefer explicit thumbnail
   const thumb = item.media.find((m) => m.mediaType === "thumbnail");
   if (thumb?.url) return thumb.url;
-  // Fall back: extract YouTube video ID and build thumbnail URL
   const yt = item.media.find((m) => m.mediaType === "youtube");
   if (yt?.url) {
     const videoId = yt.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/)?.[1];
@@ -90,6 +89,7 @@ export function ContentDiscoverySection({
   const content = liveContent ?? fallbackContent;
 
   const [category, setCategory] = React.useState("all");
+  const [sectionRef, sectionVisible] = useScrollReveal(0.08);
 
   const visible = React.useMemo(() => {
     if (category === "all") return content;
@@ -97,27 +97,49 @@ export function ContentDiscoverySection({
   }, [category, content]);
 
   return (
-    <section id="about" className="bg-neutral-50 py-16 dark:bg-neutral-950/40">
+    <section
+      ref={sectionRef as React.RefObject<HTMLElement>}
+      id="about"
+      className="bg-neutral-950 py-16 border-t border-white/5"
+    >
       <Container className="space-y-8">
-        <div className="space-y-2 text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-3xl">
+        {/* Section header */}
+        <div
+          className={`space-y-3 text-center ${sectionVisible ? "anim-fade-up" : "reveal-hidden"}`}
+        >
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px w-8 bg-amber-500/40" />
+            <span className="text-[10px] font-mono text-amber-500/70 tracking-widest uppercase">
+              CONTENT.DISCOVER
+            </span>
+            <div className="h-px w-8 bg-amber-500/40" />
+          </div>
+          <h2 className="text-2xl font-bold font-mono tracking-tight text-white sm:text-3xl">
             {title}
           </h2>
-          <p className="mx-auto max-w-2xl text-sm text-neutral-600 dark:text-neutral-300 sm:text-base">
+          <p className="mx-auto max-w-2xl text-xs font-mono text-white/40 sm:text-sm leading-relaxed">
             Explore premium drops from creators you love. Tap a card to preview and
             pay per play.
           </p>
         </div>
 
-        <CategoryFilters
-          categories={categories}
-          value={category}
-          onChange={setCategory}
-        />
+        <div className={sectionVisible ? "anim-fade-up" : "reveal-hidden"} style={{ animationDelay: "120ms" }}>
+          <CategoryFilters
+            categories={categories}
+            value={category}
+            onChange={setCategory}
+          />
+        </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {visible.map((item) => (
-            <ContentCard key={item.id} item={item} />
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {visible.map((item, i) => (
+            <div
+              key={item.id}
+              className={sectionVisible ? "anim-scale-in" : "reveal-hidden"}
+              style={{ animationDelay: `${200 + i * 50}ms` }}
+            >
+              <ContentCard item={item} />
+            </div>
           ))}
         </div>
       </Container>

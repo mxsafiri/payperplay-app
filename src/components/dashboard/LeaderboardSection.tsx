@@ -1,7 +1,10 @@
+"use client";
+
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { Container } from "./Container";
 
 type Creator = {
@@ -25,102 +28,139 @@ function getInitials(name: string | null, handle: string): string {
 
 const RANK_STYLES = [
   {
-    emoji: "🥇",
-    bgClass: "bg-gradient-to-br from-yellow-500/20 to-transparent border-yellow-500/30",
-    labelClass: "text-yellow-500",
+    rank: "01",
+    label: "GOLD",
+    borderClass: "border-amber-500/40",
+    accentClass: "text-amber-400",
+    bgClass: "bg-amber-500/8",
+    barClass: "bg-amber-500",
     prize: "100K TZS",
   },
   {
-    emoji: "🥈",
-    bgClass: "bg-gradient-to-br from-neutral-400/20 to-transparent border-neutral-400/30",
-    labelClass: "text-neutral-400",
+    rank: "02",
+    label: "SILVER",
+    borderClass: "border-neutral-400/30",
+    accentClass: "text-neutral-300",
+    bgClass: "bg-neutral-400/5",
+    barClass: "bg-neutral-400",
     prize: "50K TZS",
   },
   {
-    emoji: "🥉",
-    bgClass: "bg-gradient-to-br from-amber-700/20 to-transparent border-amber-700/30",
-    labelClass: "text-amber-600",
+    rank: "03",
+    label: "BRONZE",
+    borderClass: "border-amber-700/30",
+    accentClass: "text-amber-600",
+    bgClass: "bg-amber-700/5",
+    barClass: "bg-amber-700",
     prize: "30K TZS",
   },
 ];
 
 export function LeaderboardSection({ topEarners }: { topEarners: Creator[] }) {
+  const [ref, visible] = useScrollReveal(0.1);
   const top3 = topEarners.slice(0, 3);
 
   return (
-    <section className="py-16" id="community">
+    <section
+      ref={ref as React.RefObject<HTMLElement>}
+      className="py-16 bg-neutral-950"
+      id="community"
+    >
       <Container>
-        {/* Header */}
-        <div className="flex items-end justify-between mb-8">
+        {/* Section header */}
+        <div
+          className={`flex items-end justify-between mb-10 ${visible ? "anim-slide-left" : "reveal-hidden"}`}
+        >
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl">🏆</span>
-              <h2 className="text-2xl font-bold tracking-tight">Creator Leaderboard</h2>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-px flex-1 max-w-[32px] bg-amber-500/40" />
+              <span className="text-[10px] font-mono text-amber-500/70 tracking-widest uppercase">
+                LEADERBOARD
+              </span>
             </div>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Top earners this month — winning real cash prizes.
+            <h2 className="text-2xl font-bold font-mono tracking-tight text-white sm:text-3xl">
+              Creator Rankings
+            </h2>
+            <p className="text-xs font-mono text-white/40 mt-1 tracking-wider">
+              TOP EARNERS THIS MONTH · REAL CASH PRIZES
             </p>
           </div>
           <Link
             href="/leaderboard"
-            className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-primary-500 hover:text-primary-400 transition-colors"
+            className="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-amber-500 uppercase tracking-wider hover:text-amber-400 transition-colors"
           >
-            See all rankings →
+            ALL RANKINGS →
           </Link>
         </div>
 
         {/* Top 3 cards */}
         {top3.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             {top3.map((creator, index) => {
               const style = RANK_STYLES[index];
               return (
                 <div
                   key={creator.id}
-                  className={`relative overflow-hidden rounded-2xl border p-5 ${style.bgClass}`}
+                  className={`group relative overflow-hidden border ${style.borderClass} ${style.bgClass} p-5 transition-all hover:border-amber-500/50 amber-glow-hover ${
+                    visible ? "anim-fade-up" : "reveal-hidden"
+                  }`}
+                  style={{ animationDelay: `${120 + index * 100}ms` }}
                 >
+                  {/* Rank label */}
+                  <div className="absolute top-3 right-3">
+                    <span className={`text-[10px] font-mono font-bold ${style.accentClass} opacity-40`}>
+                      #{style.rank}
+                    </span>
+                  </div>
+                  <div className={`absolute top-0 left-0 w-3 h-3 border-t border-l ${style.borderClass} opacity-0 group-hover:opacity-100 transition-opacity`} />
+
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-primary-500/20">
+                    <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden bg-amber-500/10 border border-white/10">
                       {creator.avatarUrl?.startsWith("http") ? (
                         <Image
                           src={creator.avatarUrl}
                           alt={creator.handle}
                           fill
                           className="object-cover"
-                          sizes="48px"
+                          sizes="40px"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-primary-500">
+                        <div className={`flex h-full w-full items-center justify-center text-xs font-mono font-bold ${style.accentClass}`}>
                           {getInitials(creator.displayName, creator.handle)}
                         </div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold truncate">
+                      <div className="font-mono font-semibold text-sm text-white truncate">
                         {creator.displayName || creator.handle}
                       </div>
-                      <div className="text-xs text-neutral-500">@{creator.handle}</div>
+                      <div className="text-[10px] font-mono text-white/30">@{creator.handle}</div>
                     </div>
-                    <div className="text-2xl">{style.emoji}</div>
                   </div>
 
-                  <div className="text-2xl font-bold">{formatTzs(creator.score)}</div>
-                  <div className="text-xs text-neutral-500 mt-0.5">total earned</div>
+                  <div className={`text-xl font-bold font-mono ${style.accentClass}`}>
+                    {formatTzs(creator.score)}
+                  </div>
+                  <div className="text-[10px] font-mono text-white/30 mt-0.5 uppercase tracking-wider">total earned</div>
 
-                  <div className={`mt-3 text-xs font-semibold ${style.labelClass}`}>
-                    Prize: {style.prize}
+                  <div className="mt-3 h-px bg-white/5">
+                    <div className={`h-px ${style.barClass} opacity-50`} style={{ width: `${100 - index * 25}%` }} />
+                  </div>
+
+                  <div className={`mt-3 text-[10px] font-mono font-semibold ${style.accentClass} uppercase tracking-wider`}>
+                    PRIZE: {style.prize}
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-700 p-10 text-center">
-            <div className="text-4xl mb-3">🎬</div>
-            <p className="font-medium">No top earners yet — be the first!</p>
+          <div className="border border-dashed border-white/10 p-10 text-center">
+            <p className="text-[10px] font-mono text-white/30 tracking-widest uppercase mb-2">NO.DATA</p>
+            <p className="font-mono font-medium text-white/60">No top earners yet — be the first!</p>
             <Link
               href="/signup"
-              className="mt-4 inline-flex h-10 items-center rounded-full bg-primary-500 px-5 text-sm font-semibold text-white hover:bg-primary-400"
+              className="mt-4 inline-flex h-9 items-center bg-amber-500 px-5 text-xs font-mono font-semibold text-black uppercase tracking-wider hover:bg-amber-400 transition-colors"
             >
               Start Creating
             </Link>
@@ -128,33 +168,41 @@ export function LeaderboardSection({ topEarners }: { topEarners: Creator[] }) {
         )}
 
         {/* Prize teaser banner */}
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-primary-500/20 bg-primary-500/5 p-5">
+        <div
+          className={`mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-500/20 bg-amber-500/5 p-5 relative overflow-hidden ${
+            visible ? "anim-fade-up" : "reveal-hidden"
+          }`}
+          style={{ animationDelay: "450ms" }}
+        >
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40" />
           <div className="text-center sm:text-left">
-            <p className="font-semibold">Monthly prizes up for grabs 🎁</p>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            <p className="font-mono font-semibold text-sm text-white tracking-wider">
+              MONTHLY PRIZES UP FOR GRABS
+            </p>
+            <p className="text-[10px] font-mono text-white/40 tracking-wider mt-0.5 uppercase">
               Top Earner: 100K · Rising Star: 50K · Most Consistent: 30K
             </p>
           </div>
-          <div className="flex gap-3 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0">
             <Link
               href="/leaderboard"
-              className="inline-flex h-10 items-center rounded-full border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800 transition-colors"
+              className="inline-flex h-9 items-center border border-white/20 px-4 text-[10px] font-mono font-semibold text-white/70 uppercase tracking-wider hover:border-amber-500/40 hover:text-white transition-all"
             >
-              Full Leaderboard
+              Leaderboard
             </Link>
             <Link
               href="/signup"
-              className="inline-flex h-10 items-center rounded-full bg-primary-500 px-5 text-sm font-semibold text-white hover:bg-primary-400 transition-colors"
+              className="inline-flex h-9 items-center bg-amber-500 px-4 text-[10px] font-mono font-semibold text-black uppercase tracking-wider hover:bg-amber-400 transition-colors"
             >
               Start Creating
             </Link>
           </div>
         </div>
 
-        {/* Mobile link */}
         <div className="mt-4 text-center sm:hidden">
-          <Link href="/leaderboard" className="text-sm font-semibold text-primary-500">
-            See all rankings →
+          <Link href="/leaderboard" className="text-[11px] font-mono font-semibold text-amber-500 uppercase tracking-wider">
+            All Rankings →
           </Link>
         </div>
       </Container>

@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { placeholderCreators } from "@/data/placeholder-creators";
 import { InteractionBar } from "@/components/content/InteractionBar";
 import { CommentSection } from "@/components/content/CommentSection";
@@ -85,7 +84,6 @@ export function ContentDetailClient({
   const [showComments, setShowComments] = useState(false);
   const [showTipPanel, setShowTipPanel] = useState(false);
 
-  // Fetch wallet balance + follow status on mount
   useEffect(() => {
     if (!session) return;
     fetch("/api/wallet")
@@ -143,7 +141,7 @@ export function ContentDetailClient({
       if (!res.ok) {
         if (res.status === 402) {
           setPaymentError(
-            `Insufficient balance. You need ${data.required?.toLocaleString()} TZS but have ${data.balance?.toLocaleString()} TZS. Top up your wallet first.`
+            `Insufficient balance. You need ${data.required?.toLocaleString()} TZS but have ${data.balance?.toLocaleString()} TZS.`
           );
         } else {
           setPaymentError(data.error || "Payment failed");
@@ -151,7 +149,6 @@ export function ContentDetailClient({
         return;
       }
       setPaymentSuccess(true);
-      // Update local state — no need to re-fetch content from server
       setContent((c) => ({ ...c, hasAccess: true }));
       fetchStreamUrl();
     } catch {
@@ -185,23 +182,33 @@ export function ContentDetailClient({
   const thumbnailMedia = content.media.find((m) => m.mediaType === "thumbnail");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-neutral-950">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Button variant="ghost" onClick={() => router.back()}>
-            ← Back
-          </Button>
+      <header className="border-b border-white/10 bg-neutral-950/80 backdrop-blur-xl sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-[11px] font-mono text-white/40 uppercase tracking-wider hover:text-white hover:bg-white/5 px-3 py-1.5 border border-white/10 hover:border-white/20 transition-all"
+            >
+              ← Back
+            </button>
+            <div className="h-3 w-px bg-white/10" />
+            <div className="flex items-center gap-2 text-[9px] font-mono text-white/20">
+              <span className="w-1 h-1 rounded-full bg-amber-500/50 animate-pulse" />
+              <span className="tracking-widest uppercase">Content.View</span>
+            </div>
+          </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-5">
             {/* Video Player */}
             {content.hasAccess && isUpload && streamUrl ? (
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+              <div className="relative aspect-video overflow-hidden bg-black border border-white/10">
                 <video
                   src={streamUrl}
                   controls
@@ -213,9 +220,9 @@ export function ContentDetailClient({
                 {!showTipPanel && (
                   <button
                     onClick={() => setShowTipPanel(true)}
-                    className="absolute bottom-14 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-semibold hover:bg-primary-500 transition-colors"
+                    className="absolute bottom-14 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-[11px] font-mono uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-colors border border-white/20 hover:border-amber-500"
                   >
-                    💰 Tip
+                    ◈ Tip
                   </button>
                 )}
                 <TipPanel
@@ -227,7 +234,7 @@ export function ContentDetailClient({
                 />
               </div>
             ) : content.hasAccess && embedUrl ? (
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+              <div className="relative aspect-video overflow-hidden bg-black border border-white/10">
                 <iframe
                   src={embedUrl}
                   className="w-full h-full"
@@ -237,9 +244,9 @@ export function ContentDetailClient({
                 {!showTipPanel && (
                   <button
                     onClick={() => setShowTipPanel(true)}
-                    className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-semibold hover:bg-primary-500 transition-colors"
+                    className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-[11px] font-mono uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-colors border border-white/20 hover:border-amber-500"
                   >
-                    💰 Tip
+                    ◈ Tip
                   </button>
                 )}
                 <TipPanel
@@ -251,14 +258,17 @@ export function ContentDetailClient({
                 />
               </div>
             ) : content.hasAccess && isUpload && !streamUrl ? (
-              <div className="aspect-video rounded-lg overflow-hidden bg-black flex items-center justify-center">
+              <div className="aspect-video overflow-hidden bg-black border border-white/10 flex items-center justify-center">
                 <div className="text-center text-white">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-3" />
-                  <p className="text-sm">Loading video...</p>
+                  <div className="relative w-10 h-10 mx-auto mb-3">
+                    <div className="absolute inset-0 border border-amber-500/30 animate-spin" style={{ animationDuration: '2s' }} />
+                    <div className="absolute inset-2 border border-amber-500/50 animate-spin" style={{ animationDuration: '1s', animationDirection: 'reverse' }} />
+                  </div>
+                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest animate-pulse">Loading video...</p>
                 </div>
               </div>
             ) : !content.hasAccess && isUpload && previewUrl ? (
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+              <div className="relative aspect-video overflow-hidden bg-black border border-white/10">
                 <video
                   ref={previewVideoRef}
                   src={previewUrl}
@@ -272,44 +282,48 @@ export function ContentDetailClient({
                   muted
                 />
                 {!previewEnded && (
-                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-500/90 text-white text-xs font-semibold backdrop-blur-sm">
-                    Preview · {PREVIEW_SECONDS}s
+                  <div className="absolute top-3 left-3 px-3 py-1 bg-amber-500/90 text-black text-[10px] font-mono font-semibold uppercase tracking-widest">
+                    PREVIEW · {PREVIEW_SECONDS}s
                   </div>
                 )}
                 {previewEnded && (
-                  <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center">
-                    <div className="text-center text-white max-w-sm px-4">
-                      <div className="text-5xl mb-3">🔒</div>
-                      <h3 className="text-xl font-bold mb-2">Preview ended</h3>
-                      <p className="text-white/70 text-sm mb-4">
+                  <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center">
+                    <div className="text-center text-white max-w-sm px-4 border border-amber-500/20 p-8 relative">
+                      <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/50" />
+                      <div className="text-3xl mb-3 text-amber-500 font-mono">⬡</div>
+                      <h3 className="text-base font-bold font-mono uppercase tracking-wider mb-2">Preview Ended</h3>
+                      <p className="text-white/50 text-xs font-mono mb-4 leading-relaxed">
                         Pay {content.priceTzs.toLocaleString()} TZS to watch the full video
                       </p>
-                      <Button
+                      <button
                         onClick={() => {
                           document.getElementById("payment-sidebar")?.scrollIntoView({ behavior: "smooth" });
                         }}
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                        className="inline-flex h-9 items-center bg-amber-500 px-6 text-[11px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
                       >
                         Unlock Full Video
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+              <div className="relative aspect-video overflow-hidden bg-neutral-900 border border-white/10">
                 <Image
                   src={getCreatorImage(content.creator.id)}
                   alt={content.title}
                   fill
-                  className="object-cover blur-sm"
+                  className="object-cover blur-sm opacity-30"
                   sizes="(max-width: 1024px) 100vw, 66vw"
                 />
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-6xl mb-4">🔒</div>
-                    <h3 className="text-2xl font-bold mb-2">Premium Content</h3>
-                    <p className="text-white/80">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center text-white border border-amber-500/20 p-8 relative bg-black/40 backdrop-blur-sm max-w-sm">
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/50" />
+                    <div className="text-3xl mb-3 text-amber-500 font-mono">⬡</div>
+                    <h3 className="text-base font-bold font-mono uppercase tracking-wider mb-2">Premium Content</h3>
+                    <p className="text-white/40 text-xs font-mono">
                       Pay {content.priceTzs} TZS to unlock this exclusive content
                     </p>
                   </div>
@@ -331,78 +345,87 @@ export function ContentDetailClient({
             {showComments && <CommentSection contentId={contentId} />}
 
             {/* Content Info */}
-            <div>
+            <div className="border border-white/10 bg-neutral-950 p-5 relative">
+              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
               <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                <span className="px-2 py-0.5 border border-amber-500/30 bg-amber-500/10 text-amber-400 text-[10px] font-mono uppercase tracking-wider">
                   {content.category}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
                   {content.viewCount} views
                 </span>
               </div>
-              <h1 className="text-3xl font-bold mb-4">{content.title}</h1>
+              <h1 className="text-2xl font-bold font-mono tracking-tight text-white mb-3">{content.title}</h1>
               {content.description && (
-                <p className="text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm font-mono text-white/40 whitespace-pre-wrap leading-relaxed">
                   {content.description}
                 </p>
               )}
             </div>
 
             {/* Creator Info */}
-            <Card>
-              <CardContent className="flex items-center gap-4 p-6">
-                <Link href={`/creator/${content.creator.handle}`} className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
+            <div className="border border-white/10 bg-neutral-950 p-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/30" />
+              <div className="flex items-center gap-4">
+                <Link href={`/creator/${content.creator.handle}`} className="relative w-14 h-14 overflow-hidden flex-shrink-0 border border-white/10 hover:border-amber-500/30 transition-colors">
                   <Image
                     src={content.creator.avatarUrl || getCreatorImage(content.creator.id)}
                     alt={content.creator.displayName || content.creator.handle}
                     fill
                     className="object-cover"
-                    sizes="64px"
+                    sizes="56px"
                   />
                 </Link>
                 <div className="flex-1">
-                  <Link href={`/creator/${content.creator.handle}`} className="font-semibold hover:text-primary transition-colors">
+                  <Link href={`/creator/${content.creator.handle}`} className="font-mono font-semibold text-sm text-white hover:text-amber-400 transition-colors tracking-wider">
                     {content.creator.displayName || `@${content.creator.handle}`}
                   </Link>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[10px] font-mono text-white/30 uppercase tracking-wider mt-0.5">
                     Creator{followerCount > 0 ? ` · ${followerCount} follower${followerCount !== 1 ? "s" : ""}` : ""}
                   </p>
                 </div>
                 {session && content.creator.id && (
-                  <Button
-                    variant={isFollowing ? "secondary" : "outline"}
+                  <button
                     onClick={handleFollowToggle}
                     disabled={followLoading}
-                    className="min-w-[100px]"
+                    className={`inline-flex h-8 items-center px-4 text-[10px] font-mono font-semibold uppercase tracking-wider transition-all border ${
+                      isFollowing
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                        : "border-white/20 text-white/60 hover:border-amber-500/40 hover:text-white"
+                    }`}
                   >
-                    {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
-                  </Button>
+                    {followLoading ? "..." : isFollowing ? "Following ✓" : "+ Follow"}
+                  </button>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* More from this creator */}
             {moreFromCreator.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">
-                    More from {content.creator.displayName || `@${content.creator.handle}`}
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <div className="h-px w-4 bg-amber-500/40" />
+                    <h2 className="text-xs font-mono font-semibold text-white uppercase tracking-widest">
+                      More from {content.creator.displayName || `@${content.creator.handle}`}
+                    </h2>
+                  </div>
                   <Link
                     href={`/creator/${content.creator.handle}`}
-                    className="text-sm text-primary hover:underline font-medium"
+                    className="text-[10px] font-mono text-amber-500 hover:text-amber-400 uppercase tracking-wider transition-colors"
                   >
-                    View all &rarr;
+                    View all →
                   </Link>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {moreFromCreator.map((item) => (
                     <Link
                       key={item.id}
                       href={`/content/${item.id}`}
-                      className="group block rounded-lg overflow-hidden border border-border bg-card hover:border-primary/50 transition-colors"
+                      className="group block overflow-hidden border border-white/10 bg-neutral-950 hover:border-amber-500/30 transition-all amber-glow-hover"
                     >
-                      <div className="relative aspect-video bg-muted">
+                      <div className="relative aspect-video bg-neutral-900">
                         {item.thumbnailUrl ? (
                           <Image
                             src={item.thumbnailUrl}
@@ -412,34 +435,30 @@ export function ContentDetailClient({
                             sizes="(max-width: 1024px) 50vw, 33vw"
                           />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                          <div className="absolute inset-0 flex items-center justify-center text-white/20">
+                            <span className="text-2xl font-mono">▶</span>
                           </div>
                         )}
-                        {/* Price badge */}
                         <div className="absolute top-2 right-2">
                           {item.priceTzs === 0 ? (
-                            <span className="px-2 py-0.5 rounded-full bg-green-500/90 text-white text-xs font-semibold">
+                            <span className="px-2 py-0.5 bg-green-500/80 text-black text-[10px] font-mono font-semibold uppercase">
                               FREE
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm text-white text-xs font-semibold">
+                            <span className="px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white text-[10px] font-mono font-semibold border border-white/20">
                               {item.priceTzs.toLocaleString()} TZS
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="p-3">
-                        <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                        <h3 className="font-mono font-medium text-xs text-white/70 line-clamp-2 group-hover:text-white transition-colors tracking-wide">
                           {item.title}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 mt-1.5 text-[9px] font-mono text-white/30 uppercase tracking-wider">
                           <span>{item.viewCount} views</span>
                           <span>·</span>
-                          <span className="capitalize">{item.category}</span>
+                          <span>{item.category}</span>
                         </div>
                       </div>
                     </Link>
@@ -449,83 +468,96 @@ export function ContentDetailClient({
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Payment Sidebar */}
           <div id="payment-sidebar" className="lg:col-span-1">
             {content.priceTzs === 0 ? (
-              <Card className="sticky top-4">
-                <CardContent className="p-6 text-center">
-                  <div className="inline-block px-4 py-1 rounded-full bg-green-500/15 text-green-500 text-sm font-semibold mb-3">
+              <div className="sticky top-20 border border-green-500/20 bg-neutral-950 p-5 relative">
+                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-green-500/40" />
+                <div className="text-center py-3">
+                  <div className="inline-block px-4 py-1 border border-green-500/30 bg-green-500/10 text-green-400 text-[10px] font-mono font-semibold uppercase tracking-widest mb-3">
                     FREE
                   </div>
-                  <h3 className="font-semibold mb-2">Free Content</h3>
-                  <p className="text-sm text-muted-foreground">Watch this content for free</p>
-                </CardContent>
-              </Card>
+                  <h3 className="font-mono font-semibold text-sm text-white tracking-wider mb-1">Free Content</h3>
+                  <p className="text-[10px] font-mono text-white/30">Watch this content for free</p>
+                </div>
+              </div>
             ) : !content.hasAccess ? (
-              <Card className="sticky top-4">
-                <CardHeader>
-                  <h2 className="text-xl font-bold">Unlock Content</h2>
-                  <p className="text-sm text-muted-foreground">Pay once, watch unlimited times</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-4 rounded-lg bg-muted">
-                    <div className="text-sm text-muted-foreground mb-1">Price</div>
-                    <div className="text-3xl font-bold">
-                      {content.priceTzs}
-                      <span className="text-base font-normal text-muted-foreground ml-1">TZS</span>
+              <div className="sticky top-20 border border-white/10 bg-neutral-950 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40" />
+                <div className="border-b border-white/10 p-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="h-px w-4 bg-amber-500/40" />
+                    <span className="text-[9px] font-mono text-amber-500/60 tracking-widest uppercase">Unlock Content</span>
+                  </div>
+                  <h2 className="font-mono font-bold text-base text-white tracking-wide">Pay to Watch</h2>
+                  <p className="text-[10px] font-mono text-white/30 mt-1">Pay once · watch unlimited times</p>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="p-4 border border-amber-500/20 bg-amber-500/5 relative">
+                    <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1">Price</div>
+                    <div className="text-3xl font-bold font-mono text-amber-400">
+                      {content.priceTzs.toLocaleString()}
+                      <span className="text-sm font-normal text-white/40 ml-1">TZS</span>
                     </div>
                   </div>
 
                   {!session ? (
                     <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">Sign in to unlock this content</p>
+                      <p className="text-[10px] font-mono text-white/30">Sign in to unlock this content</p>
                       <Button className="w-full" onClick={() => router.push("/login")}>
                         Sign In
                       </Button>
                     </div>
                   ) : paymentSuccess ? (
-                    <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-                      <div className="text-3xl mb-2">✓</div>
-                      <p className="text-sm text-green-600 dark:text-green-400 font-medium">Payment successful!</p>
-                      <p className="text-xs text-muted-foreground mt-1">Content unlocked from your wallet</p>
+                    <div className="p-4 border border-green-500/20 bg-green-500/5 text-center relative">
+                      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-green-500/40" />
+                      <p className="text-2xl mb-1 text-green-400 font-mono">✓</p>
+                      <p className="text-xs font-mono text-green-400 font-semibold uppercase tracking-wider">Payment successful!</p>
+                      <p className="text-[10px] font-mono text-white/30 mt-1">Content unlocked from your wallet</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {paymentError && (
-                        <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+                        <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[10px] font-mono leading-relaxed">
                           {paymentError}
                           {paymentError.includes("Insufficient") && (
-                            <a href="/wallet" className="block mt-2 underline font-medium">Top up wallet →</a>
+                            <a href="/wallet" className="block mt-2 text-amber-400 hover:text-amber-300 uppercase tracking-wider">
+                              Top up wallet →
+                            </a>
                           )}
                         </div>
                       )}
                       {walletBalance !== null && (
-                        <div className="p-3 rounded-lg bg-muted text-sm flex justify-between">
-                          <span className="text-muted-foreground">Your wallet</span>
-                          <span className={walletBalance >= content.priceTzs ? "text-green-500 font-medium" : "text-red-400 font-medium"}>
+                        <div className="p-3 border border-white/10 bg-white/3 text-[10px] font-mono flex justify-between">
+                          <span className="text-white/30 uppercase tracking-wider">Your wallet</span>
+                          <span className={walletBalance >= content.priceTzs ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
                             {walletBalance.toLocaleString()} TZS
                           </span>
                         </div>
                       )}
-                      <Button className="w-full" disabled={paymentLoading} onClick={handlePayment}>
-                        {paymentLoading ? "Processing..." : `Pay ${content.priceTzs.toLocaleString()} TZS from Wallet`}
-                      </Button>
-                      <p className="text-xs text-center text-muted-foreground">
+                      <button
+                        className="w-full inline-flex h-10 items-center justify-center bg-amber-500 text-[11px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={paymentLoading}
+                        onClick={handlePayment}
+                      >
+                        {paymentLoading ? "Processing..." : `Pay ${content.priceTzs.toLocaleString()} TZS`}
+                      </button>
+                      <p className="text-[9px] text-center font-mono text-white/20 uppercase tracking-wider">
                         Instant · No M-Pesa push ·{" "}
-                        <a href="/wallet" className="underline">Top up wallet</a>
+                        <a href="/wallet" className="text-amber-500/60 hover:text-amber-400">Top up wallet</a>
                       </p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ) : (
-              <Card className="sticky top-4">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">✓</div>
-                  <h3 className="font-semibold mb-2">You own this content</h3>
-                  <p className="text-sm text-muted-foreground">Enjoy unlimited access</p>
-                </CardContent>
-              </Card>
+              <div className="sticky top-20 border border-green-500/20 bg-neutral-950 p-5 text-center relative">
+                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-green-500/40" />
+                <div className="text-3xl mb-2 text-green-400 font-mono">✓</div>
+                <h3 className="font-mono font-semibold text-sm text-white tracking-wider mb-1">You own this content</h3>
+                <p className="text-[10px] font-mono text-white/30">Enjoy unlimited access</p>
+              </div>
             )}
           </div>
         </div>

@@ -1,13 +1,16 @@
+"use client";
+
 import * as React from "react";
 
 import type { MonetizationFeature } from "@/data/dashboard";
-
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { Container } from "./Container";
 
-function accentChip(accent: MonetizationFeature["accent"]) {
-  return accent === "secondary"
-    ? "bg-secondary-500/15 text-secondary-700 dark:bg-secondary-500/20 dark:text-secondary-200"
-    : "bg-primary-500/15 text-primary-700 dark:bg-primary-500/20 dark:text-primary-200";
+function accentBar(accent: MonetizationFeature["accent"]) {
+  return accent === "secondary" ? "bg-pink-500" : "bg-amber-500";
+}
+function accentText(accent: MonetizationFeature["accent"]) {
+  return accent === "secondary" ? "text-pink-400" : "text-amber-400";
 }
 
 export function MonetizationSection({
@@ -17,39 +20,65 @@ export function MonetizationSection({
   title: string;
   features: MonetizationFeature[];
 }) {
+  const [ref, visible] = useScrollReveal(0.1);
+
   return (
-    <section id="how-it-works" className="bg-neutral-50 py-16 dark:bg-neutral-950/40">
-      <Container className="space-y-8">
-        <div className="space-y-2 text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-3xl">
+    <section
+      ref={ref as React.RefObject<HTMLElement>}
+      id="how-it-works"
+      className="bg-neutral-950/60 py-16 border-t border-white/5"
+    >
+      <Container className="space-y-10">
+        {/* Header */}
+        <div
+          className={`space-y-3 text-center ${visible ? "anim-fade-up" : "reveal-hidden"}`}
+        >
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="h-px w-8 bg-amber-500/40" />
+            <span className="text-[10px] font-mono text-amber-500/70 tracking-widest uppercase">
+              HOW IT WORKS
+            </span>
+            <div className="h-px w-8 bg-amber-500/40" />
+          </div>
+          <h2 className="text-2xl font-bold font-mono tracking-tight text-white sm:text-3xl">
             {title}
           </h2>
-          <p className="mx-auto max-w-2xl text-sm text-neutral-600 dark:text-neutral-300 sm:text-base">
+          <p className="mx-auto max-w-2xl text-xs font-mono text-white/40 sm:text-sm leading-relaxed">
             Built for the modern content economy — monetize moments, reward
             creators, and keep the experience premium.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {features.map((f) => (
+        <div className="grid gap-3 md:grid-cols-3">
+          {features.map((f, i) => (
             <div
               key={f.title}
-              className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950"
+              className={`group relative overflow-hidden border border-white/10 bg-neutral-950 p-6 hover:border-amber-500/30 transition-all amber-glow-hover ${
+                visible ? "anim-scale-in" : "reveal-hidden"
+              }`}
+              style={{ animationDelay: `${120 + i * 100}ms` }}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-base font-semibold text-neutral-950 dark:text-white">
-                    {f.title}
-                  </div>
-                  <div className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
-                    {f.description}
-                  </div>
-                </div>
-                <div className={"flex h-12 w-12 items-center justify-center rounded-2xl text-xl " + accentChip(f.accent)}>
-                  {f.icon}
-                </div>
+              {/* Index label */}
+              <div className="absolute top-3 right-3 text-[9px] font-mono text-white/20 tracking-wider">
+                {String(i + 1).padStart(2, '0')}
               </div>
-              <div className="mt-6 h-10 rounded-2xl bg-gradient-to-r from-primary-500/10 via-secondary-500/10 to-transparent dark:from-primary-500/15 dark:via-secondary-500/15" />
+              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/10 group-hover:border-amber-500/40 transition-colors" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/10 group-hover:border-amber-500/40 transition-colors" />
+
+              <div className={`text-2xl mb-4 ${accentText(f.accent)} opacity-80`}>
+                {f.icon}
+              </div>
+
+              <div className="text-sm font-mono font-semibold text-white tracking-wider uppercase mb-2">
+                {f.title}
+              </div>
+              <div className="text-xs font-mono text-white/40 leading-relaxed">
+                {f.description}
+              </div>
+
+              <div className="mt-5 h-px bg-white/5">
+                <div className={`h-px ${accentBar(f.accent)} opacity-0 group-hover:opacity-40 transition-opacity w-full`} />
+              </div>
             </div>
           ))}
         </div>
