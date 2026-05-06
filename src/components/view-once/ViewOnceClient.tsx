@@ -118,7 +118,7 @@ export function ViewOnceClient({
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <a href="/" className="text-amber-500 font-bold text-lg">PayPerPlay</a>
           <a
-            href="/sign-up"
+            href="/signup"
             className="text-xs bg-amber-500 text-black font-semibold px-3 py-1.5 rounded-full"
           >
             Join Free

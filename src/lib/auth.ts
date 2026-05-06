@@ -73,18 +73,10 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
     // Set cookie on the root domain (.payperplay.xyz) so it works whether
-    // the user visits www.payperplay.xyz OR payperplay.xyz — no more logout
-    // on subdomain switches. Falls back to undefined in dev (localhost).
-    crossSubdomainCookies: {
+    // the user visits www.payperplay.xyz OR payperplay.xyz.
+    crossSubDomainCookies: {
       enabled: process.env.NODE_ENV === "production",
       domain: ".payperplay.xyz",
-    },
-    // Force session cookie to always have maxAge so it survives tab/browser close.
-    // Covers all flows: email login, signup, Google, GitHub.
-    cookieOptions: {
-      sessionToken: {
-        maxAge: 60 * 60 * 24 * 30, // 30 days — matches session.expiresIn
-      },
     },
   },
 });

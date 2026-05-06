@@ -21,7 +21,7 @@ type SubStatus = {
 
 export default function FanProfilePage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sub, setSub] = useState<SubStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,9 +39,10 @@ export default function FanProfilePage() {
   >([]);
 
   useEffect(() => {
+    if (isPending) return;
     if (!session) { router.push("/login"); return; }
     void Promise.all([fetchProfile(), fetchSubStatus(), fetchFollowing()]).finally(() => setLoading(false));
-  }, [session, router]);
+  }, [session, isPending, router]);
 
   const fetchProfile = async () => {
     const res = await fetch("/api/profile/me");

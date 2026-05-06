@@ -17,7 +17,7 @@ export function ConversionBanner({ creatorName }: ConversionBannerProps) {
 
       <div className="space-y-2">
         <a
-          href="/sign-up"
+          href="/signup"
           className="block w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-xl text-center text-sm transition-colors"
         >
           Create Free Account
