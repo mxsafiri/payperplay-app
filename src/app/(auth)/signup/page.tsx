@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
 import Image from "next/image";
 import { Users, Palette } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 type UserRole = "creator" | "fan";
 
@@ -216,6 +217,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-// Needed for React.Fragment usage
-import React from "react";
