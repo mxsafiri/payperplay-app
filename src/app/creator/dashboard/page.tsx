@@ -693,18 +693,15 @@ export default function CreatorDashboard() {
                           {item.title}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-white/25 uppercase tracking-wider">
-                          <span>{item.category}</span>
+                          <span className="truncate">{item.category}</span>
                           <span>·</span>
-                          <span className={item.status === "published" ? "text-green-400/60" : "text-yellow-400/60"}>
+                          <span className={`flex-shrink-0 ${item.status === "published" ? "text-green-400/60" : "text-yellow-400/60"}`}>
                             {item.status}
                           </span>
-                          {itemEarned > 0 && (
-                            <>
-                              <span>·</span>
-                              <span className="text-green-400/70">+{itemEarned.toLocaleString()} TZS</span>
-                            </>
-                          )}
                         </div>
+                        {itemEarned > 0 && (
+                          <p className="text-[9px] font-mono text-green-400/70 mt-0.5">+{itemEarned.toLocaleString()} TZS</p>
+                        )}
                       </div>
 
                       {/* Actions */}
