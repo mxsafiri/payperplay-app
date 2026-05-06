@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
 import { FanShell } from "@/components/fan/FanShell";
 
 interface Profile {
@@ -100,7 +99,7 @@ export default function FanProfilePage() {
       });
       await fetch("/api/profile/me", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: `r2://${storageKey}` }) });
       await fetchProfile();
-    } catch (err: any) { setSaveError(err?.message || "Failed to upload avatar"); }
+    } catch (err: unknown) { setSaveError((err as Error)?.message || "Failed to upload avatar"); }
     finally { setUploading(false); setUploadProgress(0); }
   };
 
@@ -116,7 +115,7 @@ export default function FanProfilePage() {
 
   if (loading || !profile) {
     return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="relative w-10 h-10">
           <div className="absolute inset-0 border border-amber-500/30 animate-spin" />
           <div className="absolute inset-1 border border-amber-500/20 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
@@ -130,11 +129,11 @@ export default function FanProfilePage() {
       <div className="max-w-3xl mx-auto space-y-4">
 
         {/* Profile Card */}
-        <div className="border border-white/10 bg-neutral-950 relative">
+        <div className="border border-border bg-card relative">
           <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
           <div className="p-5">
-            <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">FAN.PROFILE</div>
-            <h2 className="text-sm font-semibold font-mono text-white mb-5">Your Profile</h2>
+            <div className="text-[9px] font-mono text-foreground/20 uppercase tracking-widest mb-0.5">FAN.PROFILE</div>
+            <h2 className="text-sm font-semibold font-mono text-foreground mb-5">Your Profile</h2>
 
             <div className="flex items-start gap-5 mb-5">
               {/* Avatar */}
@@ -144,7 +143,7 @@ export default function FanProfilePage() {
                     <Image src={avatarUrl} alt={profile.displayName || profile.handle} fill className="object-cover" sizes="64px" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-xl font-bold font-mono text-amber-400/50">
+                      <span className="text-xl font-bold font-mono text-amber-500/60">
                         {(profile.displayName || profile.handle).charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -152,23 +151,23 @@ export default function FanProfilePage() {
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-6 h-6 bg-neutral-950 border border-white/20 flex items-center justify-center hover:border-amber-500/40 transition-colors"
+                  className="absolute -bottom-1 -right-1 w-6 h-6 bg-background border border-border flex items-center justify-center hover:border-amber-500/40 transition-colors"
                   type="button"
                 >
-                  <span className="text-[9px] text-white/40 font-mono">◎</span>
+                  <span className="text-[9px] text-foreground/40 font-mono">◎</span>
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-mono font-bold text-white text-sm">{profile.displayName || `@${profile.handle}`}</p>
-                <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">@{profile.handle}</p>
+                <p className="font-mono font-bold text-foreground text-sm">{profile.displayName || `@${profile.handle}`}</p>
+                <p className="text-[10px] font-mono text-foreground/30 uppercase tracking-widest">@{profile.handle}</p>
                 {uploading && (
                   <div className="mt-2">
-                    <div className="h-1 bg-white/10">
+                    <div className="h-1 bg-muted">
                       <div className="bg-amber-500 h-1 transition-all" style={{ width: `${uploadProgress}%` }} />
                     </div>
-                    <p className="text-[9px] font-mono text-white/30 mt-1 uppercase tracking-wider">Uploading {uploadProgress}%...</p>
+                    <p className="text-[9px] font-mono text-foreground/30 mt-1 uppercase tracking-wider">Uploading {uploadProgress}%...</p>
                   </div>
                 )}
               </div>
@@ -176,18 +175,18 @@ export default function FanProfilePage() {
 
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Display Name</label>
+                <label className="text-[10px] font-mono text-foreground/40 uppercase tracking-widest">Display Name</label>
                 <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
-                  className="bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none" />
+                  className="bg-muted border-border text-foreground placeholder:text-foreground/30 font-mono text-sm rounded-none" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Bio</label>
+                <label className="text-[10px] font-mono text-foreground/40 uppercase tracking-widest">Bio</label>
                 <Input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell people what you like"
-                  className="bg-white/5 border-white/15 text-white placeholder:text-white/20 font-mono text-sm rounded-none" />
+                  className="bg-muted border-border text-foreground placeholder:text-foreground/30 font-mono text-sm rounded-none" />
               </div>
 
-              {saveError && <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[11px] font-mono">{saveError}</div>}
-              {saveSuccess && <div className="p-3 border border-green-500/20 bg-green-500/5 text-green-400 text-[11px] font-mono">✓ Saved</div>}
+              {saveError && <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-500 text-[11px] font-mono">{saveError}</div>}
+              {saveSuccess && <div className="p-3 border border-green-500/20 bg-green-500/5 text-green-600 text-[11px] font-mono">✓ Saved</div>}
 
               <button onClick={handleSave} disabled={saving}
                 className="inline-flex h-9 items-center px-6 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50">
@@ -198,11 +197,11 @@ export default function FanProfilePage() {
         </div>
 
         {/* Following */}
-        <div className="border border-white/10 bg-neutral-950 relative">
+        <div className="border border-border bg-card relative">
           <div className="p-5">
-            <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">FAN.FOLLOWING</div>
-            <h2 className="text-sm font-semibold font-mono text-white mb-1">Following</h2>
-            <p className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-4">
+            <div className="text-[9px] font-mono text-foreground/20 uppercase tracking-widest mb-0.5">FAN.FOLLOWING</div>
+            <h2 className="text-sm font-semibold font-mono text-foreground mb-1">Following</h2>
+            <p className="text-[10px] font-mono text-foreground/35 uppercase tracking-wider mb-4">
               {following.length === 0
                 ? "You're not following any creators yet."
                 : `Following ${following.length} creator${following.length !== 1 ? "s" : ""}`}
@@ -211,22 +210,22 @@ export default function FanProfilePage() {
             {following.length > 0 && (
               <div className="space-y-2">
                 {following.map((creator) => (
-                  <div key={creator.id} className="flex items-center gap-3 p-2.5 border border-white/5 hover:border-white/10 transition-colors">
+                  <div key={creator.id} className="flex items-center gap-3 p-2.5 border border-border hover:border-border transition-colors">
                     <div className="relative w-8 h-8 overflow-hidden bg-amber-500/10 border border-amber-500/20 flex-shrink-0">
                       {creator.avatarUrl?.startsWith("http") ? (
                         <Image src={creator.avatarUrl} alt={creator.displayName || creator.handle} fill className="object-cover" sizes="32px" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-amber-400 text-xs font-bold font-mono">
+                        <div className="w-full h-full flex items-center justify-center text-amber-500 text-xs font-bold font-mono">
                           {(creator.displayName || creator.handle).charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-mono font-semibold text-xs text-white/70 truncate">{creator.displayName || `@${creator.handle}`}</p>
-                      <p className="text-[9px] font-mono text-white/30 uppercase tracking-wider">@{creator.handle}</p>
+                      <p className="font-mono font-semibold text-xs text-foreground/70 truncate">{creator.displayName || `@${creator.handle}`}</p>
+                      <p className="text-[9px] font-mono text-foreground/30 uppercase tracking-wider">@{creator.handle}</p>
                     </div>
                     <button onClick={() => handleUnfollow(creator.id)}
-                      className="inline-flex h-7 items-center px-3 border border-white/10 text-[9px] font-mono text-white/30 uppercase tracking-widest hover:border-red-500/30 hover:text-red-400 transition-all">
+                      className="inline-flex h-7 items-center px-3 border border-border text-[9px] font-mono text-foreground/30 uppercase tracking-widest hover:border-red-500/30 hover:text-red-500 transition-all">
                       Unfollow
                     </button>
                   </div>
@@ -237,18 +236,18 @@ export default function FanProfilePage() {
         </div>
 
         {/* Subscription */}
-        <div className="border border-white/10 bg-neutral-950 relative">
+        <div className="border border-border bg-card relative">
           <div className="p-5">
-            <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">FAN.SUBSCRIPTION</div>
-            <h2 className="text-sm font-semibold font-mono text-white mb-1">Subscription</h2>
-            <p className="text-[10px] font-mono text-white/40 mb-4">{renderSubLine()}</p>
+            <div className="text-[9px] font-mono text-foreground/20 uppercase tracking-widest mb-0.5">FAN.SUBSCRIPTION</div>
+            <h2 className="text-sm font-semibold font-mono text-foreground mb-1">Subscription</h2>
+            <p className="text-[10px] font-mono text-foreground/40 mb-4">{renderSubLine()}</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <button onClick={() => router.push("/subscribe")}
                 className="inline-flex h-9 items-center px-6 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors">
                 Go to Subscription →
               </button>
               <button onClick={fetchSubStatus}
-                className="inline-flex h-9 items-center px-5 border border-white/15 text-[10px] font-mono text-white/40 uppercase tracking-widest hover:border-white/30 hover:text-white transition-all">
+                className="inline-flex h-9 items-center px-5 border border-border text-[10px] font-mono text-foreground/40 uppercase tracking-widest hover:border-foreground/30 hover:text-foreground transition-all">
                 Refresh Status
               </button>
             </div>

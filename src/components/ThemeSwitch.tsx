@@ -18,11 +18,11 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeSwitch({ className }: { className?: string }) {
-  const [theme, setTheme] = React.useState<Theme>("dark");
+  const [theme, setTheme] = React.useState<Theme>("light");
 
   React.useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
-    const next = saved === "light" ? "light" : "dark";
+    const next = saved === "dark" ? "dark" : "light";
     setTheme(next);
     applyTheme(next);
   }, []);
@@ -39,7 +39,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
       type="button"
       onClick={toggle}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 border border-white/20 px-3 text-[11px] font-mono font-medium text-white/60 uppercase tracking-widest hover:border-amber-500/50 hover:text-amber-400 transition-all",
+        "inline-flex h-8 items-center gap-1.5 border border-border px-3 text-[11px] font-mono font-medium text-foreground/60 uppercase tracking-widest hover:border-amber-500/50 hover:text-amber-400 transition-all",
         className,
       )}
       aria-label="Toggle theme"

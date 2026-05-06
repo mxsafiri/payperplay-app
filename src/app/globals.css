@@ -117,6 +117,12 @@ body {
     linear-gradient(90deg, rgba(245, 158, 11, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+/* Stronger grid lines on white/light backgrounds */
+:root:not(.dark) .tech-grid {
+  background-image:
+    linear-gradient(rgba(245, 158, 11, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.1) 1px, transparent 1px);
+}
 
 /* Amber glow border on hover */
 .amber-glow-hover {

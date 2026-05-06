@@ -44,8 +44,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
+        {/* Prevent flash of wrong theme — runs before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('ppp-theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}})();` }} />
         <style dangerouslySetInnerHTML={{ __html: getThemeCss() }} />
         <style dangerouslySetInnerHTML={{ __html: `
 @keyframes fadeUp {

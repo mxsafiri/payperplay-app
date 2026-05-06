@@ -83,32 +83,32 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   const initials = displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-neutral-950">
+    <div className="min-h-screen relative overflow-hidden bg-background">
       {/* Tech grid background */}
       <div className="fixed inset-0 tech-grid opacity-30 pointer-events-none" />
-      <div className="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-500/4 blur-[120px] pointer-events-none" />
+      <div className="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-500/[0.03] blur-[120px] pointer-events-none" />
 
       {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[220px] z-40 flex-col border-r border-white/10 bg-neutral-950/95 backdrop-blur-xl">
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[220px] z-40 flex-col border-r border-border bg-background/95 backdrop-blur-xl">
         {/* Brand */}
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-border">
           <Link href="/dashboard" className="flex items-center gap-2.5 group">
             <div className="relative w-8 h-8 bg-amber-500 flex items-center justify-center flex-shrink-0">
               <span className="text-black font-mono font-black text-sm">▶</span>
               <div className="absolute -top-0.5 -right-0.5 w-2 h-2 border-t border-r border-amber-300/50 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div>
-              <span className="text-white font-mono font-bold text-sm tracking-widest uppercase italic -skew-x-6 inline-block">PayPerPlay</span>
-              <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest">Creator.Studio</div>
+              <span className="text-foreground font-mono font-bold text-sm tracking-widest uppercase italic -skew-x-6 inline-block">PayPerPlay</span>
+              <div className="text-[9px] font-mono text-amber-500/60 uppercase tracking-widest">Creator.Studio</div>
             </div>
           </Link>
         </div>
 
         {/* System status */}
-        <div className="px-4 py-2 border-b border-white/5">
+        <div className="px-4 py-2 border-b border-border/50">
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-amber-500 animate-pulse" />
-            <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Studio.Active</span>
+            <span className="text-[9px] font-mono text-foreground/30 uppercase tracking-widest">Studio.Active</span>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
         <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto">
           {NAV_SECTIONS.map((section) => (
             <div key={section.label}>
-              <p className="text-[9px] font-mono font-semibold uppercase tracking-widest text-white/20 px-3 mb-1.5">
+              <p className="text-[9px] font-mono font-semibold uppercase tracking-widest text-foreground/20 px-3 mb-1.5">
                 {section.label}
               </p>
               <div className="space-y-0.5">
@@ -139,8 +139,8 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
                       href={item.href}
                       className={`group relative flex items-center gap-2.5 px-3 py-2 text-[11px] font-mono transition-all border-l-2 ${
                         active
-                          ? "border-amber-500 bg-amber-500/8 text-amber-400"
-                          : "border-transparent text-white/40 hover:text-white hover:bg-white/5 hover:border-white/20"
+                          ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                          : "border-transparent text-foreground/40 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/20"
                       }`}
                     >
                       {!active && (
@@ -158,24 +158,24 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
         </nav>
 
         {/* Footer */}
-        <div className="p-3 border-t border-white/10 space-y-0.5">
+        <div className="p-3 border-t border-border space-y-0.5">
           <div className="flex items-center gap-2 px-3 py-2">
             <ThemeSwitch />
-            <span className="text-[9px] font-mono text-white/20 tracking-widest uppercase">Theme</span>
+            <span className="text-[9px] font-mono text-foreground/20 tracking-widest uppercase">Theme</span>
           </div>
           <Link
             href="/feed"
-            className="flex items-center gap-2.5 px-3 py-2 text-[11px] font-mono text-white/30 hover:text-white hover:bg-white/5 transition-all border-l-2 border-transparent hover:border-white/20"
+            className="flex items-center gap-2.5 px-3 py-2 text-[11px] font-mono text-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all border-l-2 border-transparent hover:border-foreground/20"
           >
             <Eye className="w-3.5 h-3.5" />
             <span className="tracking-wider uppercase">Fan View →</span>
           </Link>
           {/* User pill */}
-          <div className="flex items-center gap-2.5 px-3 py-2 mt-1 border-t border-white/5 pt-2">
-            <div className="w-7 h-7 bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-[10px] font-mono font-bold text-amber-400">
+          <div className="flex items-center gap-2.5 px-3 py-2 mt-1 border-t border-border/50 pt-2">
+            <div className="w-7 h-7 bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-[10px] font-mono font-bold text-amber-500">
               {initials}
             </div>
-            <span className="text-xs font-mono text-white/50 tracking-wide truncate">{displayName}</span>
+            <span className="text-xs font-mono text-foreground/50 tracking-wide truncate">{displayName}</span>
           </div>
         </div>
       </aside>
@@ -228,48 +228,48 @@ function MobileBottomNav({ isActive }: { isActive: (href: string) => boolean }) 
   return (
     <>
       {showActions && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={() => setShowActions(false)} />
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowActions(false)} />
       )}
 
       {/* Action sheet popup */}
       {showActions && (
         <div
           ref={menuRef}
-          className="lg:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-56 border border-white/15 bg-neutral-950 overflow-hidden"
+          className="lg:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-56 border border-border bg-background overflow-hidden"
         >
           <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
           <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-amber-500/40" />
           <Link
             href="/creator/content/new"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-white/5 transition-colors border-b border-white/10"
+            className="flex items-center gap-3 px-5 py-4 hover:bg-foreground/5 transition-colors border-b border-border"
             onClick={() => setShowActions(false)}
           >
             <div className="w-9 h-9 border border-amber-500/30 bg-amber-500/10 flex items-center justify-center">
-              <Upload className="w-4 h-4 text-amber-400" />
+              <Upload className="w-4 h-4 text-amber-500" />
             </div>
             <div>
-              <p className="text-sm font-mono font-semibold text-white">Upload Content</p>
-              <p className="text-[10px] font-mono text-white/30">Video, music, or media</p>
+              <p className="text-sm font-mono font-semibold text-foreground">Upload Content</p>
+              <p className="text-[10px] font-mono text-foreground/40">Video, music, or media</p>
             </div>
           </Link>
           <Link
             href="/creator/live"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-white/5 transition-colors"
+            className="flex items-center gap-3 px-5 py-4 hover:bg-foreground/5 transition-colors"
             onClick={() => setShowActions(false)}
           >
             <div className="w-9 h-9 border border-red-500/30 bg-red-500/10 flex items-center justify-center">
-              <Radio className="w-4 h-4 text-red-400" />
+              <Radio className="w-4 h-4 text-red-500" />
             </div>
             <div>
-              <p className="text-sm font-mono font-semibold text-white">Go Live</p>
-              <p className="text-[10px] font-mono text-white/30">Stream to your audience</p>
+              <p className="text-sm font-mono font-semibold text-foreground">Go Live</p>
+              <p className="text-[10px] font-mono text-foreground/40">Stream to your audience</p>
             </div>
           </Link>
         </div>
       )}
 
       {/* Bottom bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 backdrop-blur-xl bg-neutral-950/95">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border backdrop-blur-xl bg-background/95">
         <div className="flex items-stretch h-16 max-w-md mx-auto">
           {navItems.slice(0, 2).map((item) => {
             const active = isActive(item.href);
@@ -278,7 +278,7 @@ function MobileBottomNav({ isActive }: { isActive: (href: string) => boolean }) 
                 key={item.href}
                 href={item.href}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[9px] font-mono uppercase tracking-wider transition-colors ${
-                  active ? "text-amber-400" : "text-white/30"
+                  active ? "text-amber-500" : "text-foreground/30"
                 }`}
               >
                 <item.icon className={`w-4 h-4 ${active ? "scale-110" : ""} transition-transform`} />
@@ -292,11 +292,11 @@ function MobileBottomNav({ isActive }: { isActive: (href: string) => boolean }) 
             <button
               onClick={() => setShowActions(!showActions)}
               className={`w-11 h-11 flex items-center justify-center -mt-4 transition-all active:scale-95 ${
-                showActions ? "bg-white/15 border border-white/20" : "bg-amber-500 hover:bg-amber-400"
+                showActions ? "bg-foreground/10 border border-border" : "bg-amber-500 hover:bg-amber-400"
               }`}
             >
               {showActions ? (
-                <X className="w-5 h-5 text-white" />
+                <X className="w-5 h-5 text-foreground" />
               ) : (
                 <Plus className="w-5 h-5 text-black font-bold" />
               )}
@@ -310,7 +310,7 @@ function MobileBottomNav({ isActive }: { isActive: (href: string) => boolean }) 
                 key={item.href}
                 href={item.href}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[9px] font-mono uppercase tracking-wider transition-colors ${
-                  active ? "text-amber-400" : "text-white/30"
+                  active ? "text-amber-500" : "text-foreground/30"
                 }`}
               >
                 <item.icon className={`w-4 h-4 ${active ? "scale-110" : ""} transition-transform`} />

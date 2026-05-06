@@ -110,7 +110,7 @@ function QuickLinkModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md mx-4 border border-white/15 bg-neutral-950 overflow-hidden">
+      <div className="relative w-full max-w-md mx-4 border border-border bg-background overflow-hidden">
         {/* Corner accents */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/60" />
         <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/60" />
@@ -124,16 +124,16 @@ function QuickLinkModal({
               <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">
                 SHARE & EARN
               </div>
-              <h3 className="text-sm font-bold font-mono text-white tracking-tight">
+              <h3 className="text-sm font-bold font-mono text-foreground tracking-tight">
                 {createdLink ? "Your Pay Link is Ready" : "Generate Pay Link"}
               </h3>
-              <p className="text-[10px] font-mono text-white/40 mt-0.5 truncate max-w-[260px]">
+              <p className="text-[10px] font-mono text-foreground/40 mt-0.5 truncate max-w-[260px]">
                 {content.title}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all font-mono text-base"
+              className="w-7 h-7 flex items-center justify-center border border-border text-foreground/40 hover:text-foreground hover:border-foreground/30 transition-all font-mono text-base"
             >×</button>
           </div>
 
@@ -164,13 +164,13 @@ function QuickLinkModal({
 
               {/* Share shortcuts */}
               <div>
-                <div className="text-[9px] font-mono text-white/25 uppercase tracking-widest mb-2">
+                <div className="text-[9px] font-mono text-foreground/25 uppercase tracking-widest mb-2">
                   QUICK SHARE
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={shareWhatsApp}
-                    className="h-9 border border-white/10 text-[10px] font-mono text-white/50 hover:text-white hover:border-white/25 transition-all uppercase tracking-widest"
+                    className="h-9 border border-border text-[10px] font-mono text-foreground/50 hover:text-foreground hover:border-foreground/25 transition-all uppercase tracking-widest"
                   >
                     WhatsApp
                   </button>
@@ -179,14 +179,14 @@ function QuickLinkModal({
                       navigator.clipboard.writeText(createdLink.url);
                       window.open("https://www.tiktok.com", "_blank");
                     }}
-                    className="h-9 border border-white/10 text-[10px] font-mono text-white/50 hover:text-white hover:border-white/25 transition-all uppercase tracking-widest"
+                    className="h-9 border border-border text-[10px] font-mono text-foreground/50 hover:text-foreground hover:border-foreground/25 transition-all uppercase tracking-widest"
                   >
                     TikTok / IG
                   </button>
                 </div>
               </div>
 
-              <p className="text-[9px] font-mono text-white/25 text-center leading-relaxed">
+              <p className="text-[9px] font-mono text-foreground/25 text-center leading-relaxed">
                 Fans pay with M-Pesa — no PayPerPlay account needed
               </p>
             </div>
@@ -195,7 +195,7 @@ function QuickLinkModal({
             <div className="space-y-4">
               {/* Price input */}
               <div>
-                <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest block mb-1.5">
+                <label className="text-[10px] font-mono text-foreground/40 uppercase tracking-widest block mb-1.5">
                   Set Your Price (TZS)
                 </label>
                 <Input
@@ -204,11 +204,11 @@ function QuickLinkModal({
                   min={100}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50"
+                  className="bg-muted border-border text-foreground placeholder:text-foreground/30 font-mono text-sm rounded-none focus:border-amber-500/50"
                 />
                 {/* Suggested prices */}
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                  <span className="text-[9px] font-mono text-white/25 uppercase tracking-wider">Suggested:</span>
+                  <span className="text-[9px] font-mono text-foreground/25 uppercase tracking-wider">Suggested:</span>
                   {SUGGESTED.map((p) => (
                     <button
                       key={p}
@@ -216,7 +216,7 @@ function QuickLinkModal({
                       className={`px-2 py-0.5 text-[9px] font-mono border transition-colors ${
                         price === String(p)
                           ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                          : "border-white/10 text-white/30 hover:border-white/25 hover:text-white/60"
+                          : "border-border text-foreground/30 hover:border-foreground/25 hover:text-foreground/60"
                       }`}
                     >
                       {p.toLocaleString()}
@@ -239,7 +239,7 @@ function QuickLinkModal({
                 {loading ? "Generating..." : "Generate Pay Link →"}
               </button>
 
-              <p className="text-[9px] font-mono text-white/25 text-center leading-relaxed">
+              <p className="text-[9px] font-mono text-foreground/25 text-center leading-relaxed">
                 Share this link on TikTok, Instagram, WhatsApp — fans pay with M-Pesa, no account needed
               </p>
             </div>
@@ -355,7 +355,7 @@ export default function CreatorDashboard() {
   const hasLinks = payLinks.length > 0;
 
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-background">
       <div className="fixed inset-0 tech-grid opacity-20 pointer-events-none" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-10 space-y-5">
@@ -367,7 +367,7 @@ export default function CreatorDashboard() {
               <div className="h-px w-4 bg-amber-500/40" />
               <span className="text-[9px] font-mono text-amber-500/50 tracking-widest uppercase">Creator.Dashboard</span>
             </div>
-            <h1 className="text-xl font-bold font-mono tracking-tight text-white">Overview</h1>
+            <h1 className="text-xl font-bold font-mono tracking-tight text-foreground">Overview</h1>
           </div>
           <Link
             href="/creator/content/new"
@@ -387,29 +387,29 @@ export default function CreatorDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">WALLET.BALANCE</div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold font-mono text-white tracking-tight">
+                  <span className="text-2xl font-bold font-mono text-foreground tracking-tight">
                     {walletData.wallet.balance.toLocaleString()}
                   </span>
-                  <span className="text-xs font-mono text-white/30">TZS</span>
+                  <span className="text-xs font-mono text-foreground/30">TZS</span>
                 </div>
               </div>
               {/* Earned / Withdrawn */}
               <div className="flex items-center gap-5 text-[10px] font-mono uppercase tracking-wider">
                 <div>
-                  <span className="text-white/25 block">Earned</span>
-                  <span className="text-green-400 font-semibold">+{walletData.wallet.totalEarned.toLocaleString()} TZS</span>
+                  <span className="text-foreground/25 block">Earned</span>
+                  <span className="text-green-500 font-semibold">+{walletData.wallet.totalEarned.toLocaleString()} TZS</span>
                 </div>
-                <div className="w-px h-6 bg-white/10" />
+                <div className="w-px h-6 bg-border" />
                 <div>
-                  <span className="text-white/25 block">Withdrawn</span>
-                  <span className="text-white/50 font-semibold">{walletData.wallet.totalWithdrawn.toLocaleString()} TZS</span>
+                  <span className="text-foreground/25 block">Withdrawn</span>
+                  <span className="text-foreground/50 font-semibold">{walletData.wallet.totalWithdrawn.toLocaleString()} TZS</span>
                 </div>
                 {walletData.wallet.ntzsBalance !== null && (
                   <>
-                    <div className="w-px h-6 bg-white/10" />
+                    <div className="w-px h-6 bg-border" />
                     <div>
-                      <span className="text-white/25 block">nTZS On-chain</span>
-                      <span className="text-amber-400 font-semibold">{walletData.wallet.ntzsBalance.toLocaleString()} TZS</span>
+                      <span className="text-foreground/25 block">nTZS On-chain</span>
+                      <span className="text-amber-500 font-semibold">{walletData.wallet.ntzsBalance.toLocaleString()} TZS</span>
                     </div>
                   </>
                 )}
@@ -427,7 +427,7 @@ export default function CreatorDashboard() {
         )}
 
         {/* ── Share & Earn — the hero section ──────────────────────── */}
-        <div className="border border-white/10 bg-neutral-950 relative">
+        <div className="border border-border bg-card relative">
           <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
 
           {/* ── State 1: No published content ── */}
@@ -438,10 +438,10 @@ export default function CreatorDashboard() {
                 <span className="text-[9px] font-mono text-amber-500/60 uppercase tracking-widest">SHARE & EARN — YOUR #1 TOOL</span>
               </div>
 
-              <h2 className="text-base font-bold font-mono text-white mb-2 leading-snug">
+              <h2 className="text-base font-bold font-mono text-foreground mb-2 leading-snug">
                 This is how you get paid on PayPerPlay
               </h2>
-              <p className="text-[11px] font-mono text-white/40 leading-relaxed mb-6 max-w-xl">
+              <p className="text-[11px] font-mono text-foreground/50 leading-relaxed mb-6 max-w-xl">
                 You don't wait for the platform to grow. You bring your own audience. Upload a video,
                 generate a pay link, and post it on TikTok, Instagram, WhatsApp — wherever your fans
                 already are. They pay with M-Pesa. No PayPerPlay account needed.
@@ -454,13 +454,13 @@ export default function CreatorDashboard() {
                   { n: "02", title: "Generate a pay link", desc: "Set your price and get a shareable link in seconds" },
                   { n: "03", title: "Share & get paid", desc: "Post on TikTok, WhatsApp, Instagram — fans pay via M-Pesa" },
                 ].map((s) => (
-                  <div key={s.n} className="flex items-start gap-3 p-3 border border-white/5 bg-white/[0.02]">
-                    <div className="w-7 h-7 border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-amber-400 text-[10px] font-mono font-bold flex-shrink-0">
+                  <div key={s.n} className="flex items-start gap-3 p-3 border border-border bg-muted/40">
+                    <div className="w-7 h-7 border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-amber-500 text-[10px] font-mono font-bold flex-shrink-0">
                       {s.n}
                     </div>
                     <div>
-                      <p className="text-[11px] font-mono font-semibold text-white/80">{s.title}</p>
-                      <p className="text-[9px] font-mono text-white/30 mt-0.5 leading-relaxed">{s.desc}</p>
+                      <p className="text-[11px] font-mono font-semibold text-foreground/80">{s.title}</p>
+                      <p className="text-[9px] font-mono text-foreground/40 mt-0.5 leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -483,10 +483,10 @@ export default function CreatorDashboard() {
                 <span className="text-[9px] font-mono text-amber-500/60 uppercase tracking-widest">SHARE & EARN — START HERE</span>
               </div>
 
-              <h2 className="text-base font-bold font-mono text-white mb-1.5">
+              <h2 className="text-base font-bold font-mono text-foreground mb-1.5">
                 You have content — now generate pay links to earn
               </h2>
-              <p className="text-[11px] font-mono text-white/40 mb-5 leading-relaxed max-w-xl">
+              <p className="text-[11px] font-mono text-foreground/50 mb-5 leading-relaxed max-w-xl">
                 A pay link lets anyone pay to watch your content — directly from a link you share on
                 social media. Set a price, copy the link, post it anywhere. No PayPerPlay account needed
                 to pay.
@@ -498,18 +498,18 @@ export default function CreatorDashboard() {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3 p-3 border border-white/5 bg-white/[0.02] hover:border-amber-500/20 hover:bg-amber-500/3 transition-all"
+                      className="flex items-center gap-3 p-3 border border-border bg-muted/30 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all"
                     >
-                      <div className="w-9 h-9 flex-shrink-0 bg-white/5 border border-white/5 overflow-hidden">
+                      <div className="w-9 h-9 flex-shrink-0 bg-muted border border-border overflow-hidden">
                         {thumb ? (
                           <Image src={thumb} alt={item.title} width={36} height={36} className="object-cover w-full h-full" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/20 font-mono text-sm">▶</div>
+                          <div className="w-full h-full flex items-center justify-center text-foreground/20 font-mono text-sm">▶</div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-mono font-semibold text-white/70 truncate">{item.title}</p>
-                        <p className="text-[9px] font-mono text-white/25 uppercase tracking-wider">{item.category}</p>
+                        <p className="text-[11px] font-mono font-semibold text-foreground/70 truncate">{item.title}</p>
+                        <p className="text-[9px] font-mono text-foreground/30 uppercase tracking-wider">{item.category}</p>
                       </div>
                       <button
                         onClick={() => setLinkModalContent(item)}
@@ -523,8 +523,8 @@ export default function CreatorDashboard() {
               </div>
 
               {publishedContent.length > 5 && (
-                <p className="text-[9px] font-mono text-white/25 mt-2 uppercase tracking-wider">
-                  + {publishedContent.length - 5} more — <Link href="/creator/content" className="text-amber-500/60 hover:text-amber-400">view all</Link>
+                <p className="text-[9px] font-mono text-foreground/30 mt-2 uppercase tracking-wider">
+                  + {publishedContent.length - 5} more — <Link href="/creator/content" className="text-amber-500/70 hover:text-amber-500">view all</Link>
                 </p>
               )}
             </div>
@@ -539,12 +539,12 @@ export default function CreatorDashboard() {
                   <div className="w-5 h-5 bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-[10px] font-mono font-bold">◈</div>
                   <div>
                     <span className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest block">SHARE & EARN</span>
-                    <span className="text-sm font-bold font-mono text-white">Your Pay Links</span>
+                    <span className="text-sm font-bold font-mono text-foreground">Your Pay Links</span>
                   </div>
                 </div>
                 <Link
                   href="/creator/share-earn"
-                  className="text-[9px] font-mono text-white/25 uppercase tracking-widest hover:text-amber-400 transition-colors"
+                  className="text-[9px] font-mono text-foreground/30 uppercase tracking-widest hover:text-amber-500 transition-colors"
                 >
                   View All ({payLinks.length}) →
                 </Link>
@@ -557,9 +557,9 @@ export default function CreatorDashboard() {
                   { label: "Total Sales", value: totalLinkSales },
                   { label: "Link Revenue", value: `${totalLinkRevenue.toLocaleString()} TZS` },
                 ].map((s) => (
-                  <div key={s.label} className="border border-white/5 bg-white/[0.02] p-3 text-center">
-                    <div className="text-base font-bold font-mono text-amber-400">{s.value}</div>
-                    <div className="text-[9px] font-mono text-white/25 uppercase tracking-wider mt-0.5">{s.label}</div>
+                  <div key={s.label} className="border border-border bg-muted/30 p-3 text-center">
+                    <div className="text-base font-bold font-mono text-amber-500">{s.value}</div>
+                    <div className="text-[9px] font-mono text-foreground/30 uppercase tracking-wider mt-0.5">{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -569,20 +569,20 @@ export default function CreatorDashboard() {
                 {topLinks.map((link, i) => {
                   const earned = link.purchaseCount * link.priceTzs;
                   return (
-                    <div key={link.id} className="flex items-center gap-3 p-3 border border-white/5 bg-white/[0.02] hover:border-white/10 transition-colors group">
-                      <div className="text-[9px] font-mono text-white/15 w-4 flex-shrink-0">#{i + 1}</div>
+                    <div key={link.id} className="flex items-center gap-3 p-3 border border-border bg-muted/20 hover:border-border hover:bg-muted/40 transition-colors group">
+                      <div className="text-[9px] font-mono text-foreground/20 w-4 flex-shrink-0">#{i + 1}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-mono font-semibold text-white/70 truncate group-hover:text-white transition-colors">
+                        <p className="text-[11px] font-mono font-semibold text-foreground/70 truncate group-hover:text-foreground transition-colors">
                           {link.content.title}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-white/30 uppercase tracking-wider">
-                          <span className="text-amber-500/70">{link.priceTzs.toLocaleString()} TZS</span>
+                        <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-foreground/30 uppercase tracking-wider">
+                          <span className="text-amber-500">{link.priceTzs.toLocaleString()} TZS</span>
                           <span>·</span>
                           <span>{link.purchaseCount} paid</span>
                           {earned > 0 && (
                             <>
                               <span>·</span>
-                              <span className="text-green-400/70">+{earned.toLocaleString()} earned</span>
+                              <span className="text-green-500">+{earned.toLocaleString()} earned</span>
                             </>
                           )}
                         </div>
@@ -593,15 +593,15 @@ export default function CreatorDashboard() {
                           onClick={() => copyLink(link.slug)}
                           className={`h-7 px-3 text-[9px] font-mono font-bold uppercase tracking-widest transition-all border ${
                             copiedSlug === link.slug
-                              ? "border-green-500/40 bg-green-500/10 text-green-400"
-                              : "border-white/10 text-white/40 hover:border-amber-500/40 hover:text-amber-400 hover:bg-amber-500/5"
+                              ? "border-green-500/40 bg-green-500/10 text-green-600"
+                              : "border-border text-foreground/40 hover:border-amber-500/40 hover:text-amber-500 hover:bg-amber-500/5"
                           }`}
                         >
                           {copiedSlug === link.slug ? "✓" : "Copy"}
                         </button>
                         <button
                           onClick={() => window.open(`/v/${link.slug}`, "_blank")}
-                          className="h-7 px-2 border border-white/10 text-[10px] font-mono text-white/30 hover:border-white/25 hover:text-white transition-all"
+                          className="h-7 px-2 border border-border text-[10px] font-mono text-foreground/30 hover:border-foreground/25 hover:text-foreground transition-all"
                           title="Preview link"
                         >↗</button>
                       </div>
@@ -612,8 +612,8 @@ export default function CreatorDashboard() {
 
               {/* Create another link */}
               {publishedContent.some((c) => !linkedContentIds.has(c.id)) && (
-                <div className="border border-dashed border-white/10 p-3">
-                  <p className="text-[10px] font-mono text-white/30 mb-2">
+                <div className="border border-dashed border-border p-3">
+                  <p className="text-[10px] font-mono text-foreground/40 mb-2">
                     {publishedContent.filter((c) => !linkedContentIds.has(c.id)).length} content{" "}
                     item{publishedContent.filter((c) => !linkedContentIds.has(c.id)).length > 1 ? "s" : ""}{" "}
                     without a pay link yet
@@ -626,7 +626,7 @@ export default function CreatorDashboard() {
                         <button
                           key={item.id}
                           onClick={() => setLinkModalContent(item)}
-                          className="h-7 px-3 border border-white/10 text-[9px] font-mono text-white/40 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/5 transition-all uppercase tracking-wider truncate max-w-[160px]"
+                          className="h-7 px-3 border border-border text-[9px] font-mono text-foreground/40 hover:border-amber-500/30 hover:text-amber-500 hover:bg-amber-500/5 transition-all uppercase tracking-wider truncate max-w-[160px]"
                         >
                           + {item.title}
                         </button>
@@ -639,25 +639,25 @@ export default function CreatorDashboard() {
         </div>
 
         {/* ── Recent Content ────────────────────────────────────────── */}
-        <div className="border border-white/10 bg-neutral-950 relative">
-          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/15" />
+        <div className="border border-border bg-card relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-foreground/10" />
           <div className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">CONTENT.RECENT</div>
-                <h2 className="text-sm font-semibold font-mono text-white">Your Content</h2>
+                <div className="text-[9px] font-mono text-foreground/25 uppercase tracking-widest mb-0.5">CONTENT.RECENT</div>
+                <h2 className="text-sm font-semibold font-mono text-foreground">Your Content</h2>
               </div>
               <div className="flex items-center gap-3">
-                <Link href="/creator/content" className="text-[9px] font-mono text-white/25 uppercase tracking-widest hover:text-amber-400 transition-colors">
+                <Link href="/creator/content" className="text-[9px] font-mono text-foreground/30 uppercase tracking-widest hover:text-amber-500 transition-colors">
                   View All →
                 </Link>
               </div>
             </div>
 
             {content.length === 0 ? (
-              <div className="text-center py-10 border border-dashed border-white/8">
-                <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-1">NO.CONTENT.YET</p>
-                <p className="text-xs font-mono text-white/35 mb-4">Upload your first video or audio to start earning</p>
+              <div className="text-center py-10 border border-dashed border-border">
+                <p className="text-[9px] font-mono text-foreground/25 uppercase tracking-widest mb-1">NO.CONTENT.YET</p>
+                <p className="text-xs font-mono text-foreground/40 mb-4">Upload your first video or audio to start earning</p>
                 <Link
                   href="/creator/content/new"
                   className="inline-flex h-8 items-center px-5 bg-amber-500 hover:bg-amber-400 text-[10px] font-mono font-bold text-black uppercase tracking-widest transition-colors"
@@ -676,31 +676,31 @@ export default function CreatorDashboard() {
                   return (
                     <div
                       key={item.id}
-                      className="group flex items-center gap-3 p-2.5 border border-white/5 hover:border-white/10 bg-white/[0.01] hover:bg-white/[0.03] transition-all"
+                      className="group flex items-center gap-3 p-2.5 border border-border/50 hover:border-border bg-foreground/[0.01] hover:bg-foreground/[0.03] transition-all"
                     >
                       {/* Thumbnail */}
-                      <div className="relative w-10 h-10 flex-shrink-0 bg-white/5 border border-white/5 overflow-hidden">
+                      <div className="relative w-10 h-10 flex-shrink-0 bg-muted border border-border overflow-hidden">
                         {thumb ? (
                           <Image src={thumb} alt={item.title} fill className="object-cover" sizes="40px" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/20 font-mono">▶</div>
+                          <div className="w-full h-full flex items-center justify-center text-foreground/20 font-mono">▶</div>
                         )}
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono font-medium text-xs text-white/65 truncate group-hover:text-white/85 transition-colors">
+                        <p className="font-mono font-medium text-xs text-foreground/65 truncate group-hover:text-foreground/90 transition-colors">
                           {item.title}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-white/25 uppercase tracking-wider">
+                        <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-foreground/30 uppercase tracking-wider">
                           <span className="truncate">{item.category}</span>
                           <span>·</span>
-                          <span className={`flex-shrink-0 ${item.status === "published" ? "text-green-400/60" : "text-yellow-400/60"}`}>
+                          <span className={`flex-shrink-0 ${item.status === "published" ? "text-green-500/80" : "text-yellow-500/80"}`}>
                             {item.status}
                           </span>
                         </div>
                         {itemEarned > 0 && (
-                          <p className="text-[9px] font-mono text-green-400/70 mt-0.5">+{itemEarned.toLocaleString()} TZS</p>
+                          <p className="text-[9px] font-mono text-green-500 mt-0.5">+{itemEarned.toLocaleString()} TZS</p>
                         )}
                       </div>
 
@@ -715,8 +715,8 @@ export default function CreatorDashboard() {
                               }}
                               className={`h-7 px-2.5 text-[9px] font-mono font-semibold uppercase tracking-widest border transition-all ${
                                 itemLinks[0] && copiedSlug === itemLinks[0].slug
-                                  ? "border-green-500/40 bg-green-500/10 text-green-400"
-                                  : "border-amber-500/25 bg-amber-500/8 text-amber-400/80 hover:bg-amber-500/15 hover:border-amber-500/40"
+                                  ? "border-green-500/40 bg-green-500/10 text-green-600"
+                                  : "border-amber-500/30 bg-amber-500/8 text-amber-600 hover:bg-amber-500/15 hover:border-amber-500/50"
                               }`}
                             >
                               {itemLinks[0] && copiedSlug === itemLinks[0].slug ? "✓ Copied" : "Copy Link"}
@@ -724,17 +724,17 @@ export default function CreatorDashboard() {
                           ) : (
                             <button
                               onClick={() => setLinkModalContent(item)}
-                              className="h-7 px-2.5 text-[9px] font-mono font-semibold uppercase tracking-widest border border-white/10 text-white/35 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/5 transition-all"
+                              className="h-7 px-2.5 text-[9px] font-mono font-semibold uppercase tracking-widest border border-border text-foreground/40 hover:border-amber-500/30 hover:text-amber-500 hover:bg-amber-500/5 transition-all"
                             >
                               + Pay Link
                             </button>
                           )
                         ) : (
-                          <span className="text-[9px] font-mono text-white/15 uppercase tracking-wider px-2">Draft</span>
+                          <span className="text-[9px] font-mono text-foreground/20 uppercase tracking-wider px-2">Draft</span>
                         )}
                         <Link
                           href={`/creator/content/${item.id}/edit`}
-                          className="w-7 h-7 flex items-center justify-center border border-white/8 text-white/25 hover:text-white/60 hover:border-white/20 transition-all font-mono text-xs"
+                          className="w-7 h-7 flex items-center justify-center border border-border/60 text-foreground/30 hover:text-foreground/60 hover:border-border transition-all font-mono text-xs"
                         >✎</Link>
                       </div>
                     </div>
@@ -747,18 +747,18 @@ export default function CreatorDashboard() {
 
         {/* ── Transactions ─────────────────────────────────────────── */}
         {walletData && walletData.transactions.length > 0 && (
-          <div className="border border-white/8 bg-neutral-950 relative">
-            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/10" />
+          <div className="border border-border/60 bg-card relative">
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-foreground/10" />
             <div className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="text-[9px] font-mono text-white/15 uppercase tracking-widest mb-0.5">TX.HISTORY</div>
-                  <h3 className="text-sm font-semibold font-mono text-white/70">Transactions</h3>
+                  <div className="text-[9px] font-mono text-foreground/20 uppercase tracking-widest mb-0.5">TX.HISTORY</div>
+                  <h3 className="text-sm font-semibold font-mono text-foreground/70">Transactions</h3>
                 </div>
                 {walletData.transactions.length > 4 && (
                   <button
                     onClick={() => setShowAllTx(!showAllTx)}
-                    className="text-[9px] font-mono text-white/25 uppercase tracking-widest hover:text-amber-400 transition-colors"
+                    className="text-[9px] font-mono text-foreground/30 uppercase tracking-widest hover:text-amber-500 transition-colors"
                   >
                     {showAllTx ? "Show Less" : `All (${walletData.transactions.length})`}
                   </button>
@@ -766,23 +766,23 @@ export default function CreatorDashboard() {
               </div>
               <div className="space-y-1">
                 {visibleTx.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-2.5 border border-white/5 hover:border-white/8 transition-colors">
+                  <div key={tx.id} className="flex items-center justify-between p-2.5 border border-border/50 hover:border-border transition-colors">
                     <div className="flex items-center gap-2.5">
                       <div className={`w-5 h-5 flex items-center justify-center border text-[9px] font-mono ${
-                        tx.type === "earning" ? "border-green-500/25 bg-green-500/8 text-green-400" :
-                        tx.type === "withdrawal" ? "border-red-500/25 bg-red-500/8 text-red-400" :
-                        "border-white/8 text-white/25"
+                        tx.type === "earning" ? "border-green-500/25 bg-green-500/8 text-green-600" :
+                        tx.type === "withdrawal" ? "border-red-500/25 bg-red-500/8 text-red-500" :
+                        "border-border text-foreground/25"
                       }`}>
                         {tx.type === "earning" ? "▼" : tx.type === "withdrawal" ? "▲" : "○"}
                       </div>
                       <div>
-                        <div className="text-[10px] font-mono font-semibold text-white/60 capitalize">{tx.type}</div>
-                        <div className="text-[9px] font-mono text-white/25 truncate max-w-[180px] uppercase tracking-wider">
+                        <div className="text-[10px] font-mono font-semibold text-foreground/60 capitalize">{tx.type}</div>
+                        <div className="text-[9px] font-mono text-foreground/30 truncate max-w-[180px] uppercase tracking-wider">
                           {tx.description || new Date(tx.createdAt).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
-                    <div className={`text-sm font-bold font-mono ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
+                    <div className={`text-sm font-bold font-mono ${tx.amount > 0 ? "text-green-600" : "text-red-500"}`}>
                       {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} TZS
                     </div>
                   </div>
@@ -810,7 +810,7 @@ export default function CreatorDashboard() {
       {showWithdrawModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)} />
-          <div className="relative w-full max-w-md mx-4 border border-white/15 bg-neutral-950 overflow-hidden">
+          <div className="relative w-full max-w-md mx-4 border border-border bg-background overflow-hidden">
             <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
             <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/50" />
             <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/50" />
@@ -819,31 +819,31 @@ export default function CreatorDashboard() {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">WALLET.WITHDRAW</div>
-                  <h3 className="text-base font-bold font-mono text-white tracking-tight">Withdraw Earnings</h3>
+                  <h3 className="text-base font-bold font-mono text-foreground tracking-tight">Withdraw Earnings</h3>
                 </div>
-                <button onClick={() => setShowWithdrawModal(false)} className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all font-mono text-base">×</button>
+                <button onClick={() => setShowWithdrawModal(false)} className="w-7 h-7 flex items-center justify-center border border-border text-foreground/40 hover:text-foreground hover:border-foreground/30 transition-all font-mono text-base">×</button>
               </div>
 
               {withdrawSuccess ? (
                 <div className="text-center py-6">
-                  <div className="w-12 h-12 mx-auto mb-4 border border-green-500/30 bg-green-500/10 flex items-center justify-center text-green-400 font-mono text-xl">✓</div>
-                  <p className="text-sm font-mono text-green-400">{withdrawSuccess}</p>
-                  <p className="text-[10px] font-mono text-white/30 mt-1">Check your phone for the M-Pesa prompt</p>
-                  <button onClick={() => setShowWithdrawModal(false)} className="mt-5 inline-flex h-9 items-center px-6 border border-white/15 text-[10px] font-mono text-white/60 uppercase tracking-widest hover:border-white/30 hover:text-white transition-all">Done</button>
+                  <div className="w-12 h-12 mx-auto mb-4 border border-green-500/30 bg-green-500/10 flex items-center justify-center text-green-600 font-mono text-xl">✓</div>
+                  <p className="text-sm font-mono text-green-600">{withdrawSuccess}</p>
+                  <p className="text-[10px] font-mono text-foreground/30 mt-1">Check your phone for the M-Pesa prompt</p>
+                  <button onClick={() => setShowWithdrawModal(false)} className="mt-5 inline-flex h-9 items-center px-6 border border-border text-[10px] font-mono text-foreground/60 uppercase tracking-widest hover:border-foreground/30 hover:text-foreground transition-all">Done</button>
                 </div>
               ) : (
                 <form onSubmit={handleWithdraw} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Amount (TZS)</label>
-                    <Input type="number" placeholder="5,000" min={5000} max={walletData?.wallet.balance || 0} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} required className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50" />
-                    <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 5,000 TZS</p>
+                    <label className="text-[10px] font-mono text-foreground/40 uppercase tracking-widest">Amount (TZS)</label>
+                    <Input type="number" placeholder="5,000" min={5000} max={walletData?.wallet.balance || 0} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} required className="bg-muted border-border text-foreground placeholder:text-foreground/30 font-mono text-sm rounded-none focus:border-amber-500/50" />
+                    <p className="text-[9px] font-mono text-foreground/25 uppercase tracking-wider">Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 5,000 TZS</p>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Mobile Money Number</label>
-                    <Input type="tel" placeholder="0712345678" value={withdrawPhone} onChange={(e) => setWithdrawPhone(e.target.value)} required className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50" />
-                    <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">M-Pesa, Airtel Money, Mixx by Yas, or HaloPesa</p>
+                    <label className="text-[10px] font-mono text-foreground/40 uppercase tracking-widest">Mobile Money Number</label>
+                    <Input type="tel" placeholder="0712345678" value={withdrawPhone} onChange={(e) => setWithdrawPhone(e.target.value)} required className="bg-muted border-border text-foreground placeholder:text-foreground/30 font-mono text-sm rounded-none focus:border-amber-500/50" />
+                    <p className="text-[9px] font-mono text-foreground/25 uppercase tracking-wider">M-Pesa, Airtel Money, Mixx by Yas, or HaloPesa</p>
                   </div>
-                  {withdrawError && <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[10px] font-mono">{withdrawError}</div>}
+                  {withdrawError && <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-mono">{withdrawError}</div>}
                   <button type="submit" disabled={withdrawLoading || !withdrawAmount || !withdrawPhone} className="w-full h-10 inline-flex items-center justify-center bg-amber-500 text-[10px] font-mono font-bold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {withdrawLoading ? "Processing..." : `Withdraw ${withdrawAmount ? `${parseInt(withdrawAmount).toLocaleString()} TZS` : ""}`}
                   </button>
