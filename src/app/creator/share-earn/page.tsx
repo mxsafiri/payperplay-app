@@ -48,7 +48,7 @@ export default function ShareEarnPage() {
   };
 
   const copyLink = (slug: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/watch/${slug}`);
+    navigator.clipboard.writeText(`${window.location.origin}/v/${slug}`);
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(null), 2000);
   };
@@ -176,7 +176,7 @@ export default function ShareEarnPage() {
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                           <code className="text-[10px] font-mono text-white/30 bg-white/5 px-2 py-1 truncate max-w-[200px]">
-                            /watch/{link.slug}
+                            /v/{link.slug}
                           </code>
                           <span className={`inline-flex items-center text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 border ${
                             link.isActive
@@ -200,7 +200,7 @@ export default function ShareEarnPage() {
                           )}
                         </button>
                         <button
-                          onClick={() => window.open(`/watch/${link.slug}`, "_blank")}
+                          onClick={() => window.open(`/v/${link.slug}`, "_blank")}
                           className="w-8 h-8 border border-white/10 flex items-center justify-center hover:border-white/25 hover:bg-white/5 transition-all"
                           title="Open link"
                         >
