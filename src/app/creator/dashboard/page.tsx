@@ -1,44 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
 
-interface CreatorStats {
-  totalContent: number;
-  publishedContent: number;
-  totalEarnings: number;
-  totalViews: number;
-}
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface WalletData {
   wallet: {
-    id: string;
     balance: number;
     totalEarned: number;
     totalWithdrawn: number;
-    totalFees: number;
     ntzsBalance: number | null;
     ntzsWalletAddress: string | null;
   };
   transactions: {
     id: string;
     type: string;
-    status: string;
     amount: number;
-    balanceAfter: number;
     description: string | null;
     createdAt: string;
   }[];
-}
-
-interface MediaItem {
-  id: string;
-  mediaType: string;
-  url: string | null;
 }
 
 interface ContentItem {
@@ -48,55 +33,266 @@ interface ContentItem {
   status: string;
   priceTzs: number;
   viewCount: number;
-  createdAt: string;
-  media?: MediaItem[];
+  media?: { mediaType: string; url: string | null }[];
 }
 
-const NAV_ITEMS = [
-  { href: "/creator/dashboard", label: "Dashboard", short: "DASH" },
-  { href: "/creator/content/new", label: "Create Content", short: "CREATE" },
-  { href: "/creator/playlists", label: "Playlists", short: "LISTS" },
-  { href: "/creator/profile", label: "Profile", short: "PROFILE" },
-];
+interface PayLink {
+  id: string;
+  slug: string;
+  priceTzs: number;
+  purchaseCount: number;
+  isActive: boolean;
+  createdAt: string;
+  content: { id: string; title: string };
+}
 
-const MAX_VISIBLE_TX = 5;
+// ── Quick Link Modal ──────────────────────────────────────────────────────────
+
+function QuickLinkModal({
+  content,
+  onClose,
+  onCreated,
+}: {
+  content: ContentItem;
+  onClose: () => void;
+  onCreated: (link: PayLink) => void;
+}) {
+  const [price, setPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [createdLink, setCreatedLink] = useState<{ slug: string; url: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const SUGGESTED = [200, 500, 1000, 2000, 5000];
+
+  const handleCreate = async () => {
+    const priceTzs = parseInt(price);
+    if (!priceTzs || priceTzs < 100) { setError("Minimum price is 100 TZS"); return; }
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/view-once", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: content.id, priceTzs, teaserSeconds: 10 }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Failed to create link"); return; }
+      setCreatedLink({ slug: data.link.slug, url: data.link.url });
+      onCreated({
+        id: data.link.id,
+        slug: data.link.slug,
+        priceTzs,
+        purchaseCount: 0,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        content: { id: content.id, title: content.title },
+      });
+    } catch { setError("Something went wrong"); }
+    finally { setLoading(false); }
+  };
+
+  const copy = () => {
+    if (!createdLink) return;
+    navigator.clipboard.writeText(createdLink.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareWhatsApp = () => {
+    if (!createdLink) return;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`Watch "${content.title}" exclusively on PayPerPlay — pay with M-Pesa, no account needed.\n\n${createdLink.url}`)}`,
+      "_blank"
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md mx-4 border border-white/15 bg-neutral-950 overflow-hidden">
+        {/* Corner accents */}
+        <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/60" />
+        <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/60" />
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/60" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/60" />
+
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">
+                SHARE & EARN
+              </div>
+              <h3 className="text-sm font-bold font-mono text-white tracking-tight">
+                {createdLink ? "Your Pay Link is Ready" : "Generate Pay Link"}
+              </h3>
+              <p className="text-[10px] font-mono text-white/40 mt-0.5 truncate max-w-[260px]">
+                {content.title}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all font-mono text-base"
+            >×</button>
+          </div>
+
+          {createdLink ? (
+            /* ── Success state ── */
+            <div className="space-y-4">
+              {/* Link display */}
+              <div className="border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-1.5">
+                  YOUR PAY LINK
+                </div>
+                <p className="text-[11px] font-mono text-amber-400 break-all leading-relaxed">
+                  {createdLink.url}
+                </p>
+              </div>
+
+              {/* Copy */}
+              <button
+                onClick={copy}
+                className={`w-full h-10 inline-flex items-center justify-center text-[11px] font-mono font-bold uppercase tracking-widest transition-all ${
+                  copied
+                    ? "bg-green-500 text-black"
+                    : "bg-amber-500 hover:bg-amber-400 text-black"
+                }`}
+              >
+                {copied ? "✓ COPIED!" : "COPY LINK"}
+              </button>
+
+              {/* Share shortcuts */}
+              <div>
+                <div className="text-[9px] font-mono text-white/25 uppercase tracking-widest mb-2">
+                  QUICK SHARE
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={shareWhatsApp}
+                    className="h-9 border border-white/10 text-[10px] font-mono text-white/50 hover:text-white hover:border-white/25 transition-all uppercase tracking-widest"
+                  >
+                    WhatsApp
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdLink.url);
+                      window.open("https://www.tiktok.com", "_blank");
+                    }}
+                    className="h-9 border border-white/10 text-[10px] font-mono text-white/50 hover:text-white hover:border-white/25 transition-all uppercase tracking-widest"
+                  >
+                    TikTok / IG
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[9px] font-mono text-white/25 text-center leading-relaxed">
+                Fans pay with M-Pesa — no PayPerPlay account needed
+              </p>
+            </div>
+          ) : (
+            /* ── Create state ── */
+            <div className="space-y-4">
+              {/* Price input */}
+              <div>
+                <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest block mb-1.5">
+                  Set Your Price (TZS)
+                </label>
+                <Input
+                  type="number"
+                  placeholder="500"
+                  min={100}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50"
+                />
+                {/* Suggested prices */}
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <span className="text-[9px] font-mono text-white/25 uppercase tracking-wider">Suggested:</span>
+                  {SUGGESTED.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPrice(String(p))}
+                      className={`px-2 py-0.5 text-[9px] font-mono border transition-colors ${
+                        price === String(p)
+                          ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
+                          : "border-white/10 text-white/30 hover:border-white/25 hover:text-white/60"
+                      }`}
+                    >
+                      {p.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-2.5 border border-red-500/20 bg-red-500/5 text-red-400 text-[10px] font-mono">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleCreate}
+                disabled={loading || !price}
+                className="w-full h-10 inline-flex items-center justify-center bg-amber-500 hover:bg-amber-400 text-[11px] font-mono font-bold text-black uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Generating..." : "Generate Pay Link →"}
+              </button>
+
+              <p className="text-[9px] font-mono text-white/25 text-center leading-relaxed">
+                Share this link on TikTok, Instagram, WhatsApp — fans pay with M-Pesa, no account needed
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function CreatorDashboard() {
   const router = useRouter();
-  const pathname = usePathname();
   const { data: session, isPending } = useSession();
-  const [stats, setStats] = useState<CreatorStats | null>(null);
-  const [recentContent, setRecentContent] = useState<ContentItem[]>([]);
+
+  const [content, setContent] = useState<ContentItem[]>([]);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [payLinks, setPayLinks] = useState<PayLink[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Withdraw modal
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawPhone, setWithdrawPhone] = useState("");
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawError, setWithdrawError] = useState("");
   const [withdrawSuccess, setWithdrawSuccess] = useState("");
+
+  // Pay link modal
+  const [linkModalContent, setLinkModalContent] = useState<ContentItem | null>(null);
+
+  // UI state
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [showAllTx, setShowAllTx] = useState(false);
 
   useEffect(() => {
-    if (!isPending && !session) {
-      router.push("/login");
-      return;
-    }
-    if (session) fetchDashboardData();
+    if (!isPending && !session) { router.push("/login"); return; }
+    if (session) fetchAll();
   }, [session, isPending, router]);
 
-  const fetchDashboardData = async () => {
+  const fetchAll = async () => {
     try {
-      const [statsRes, contentRes, walletRes] = await Promise.all([
-        fetch("/api/creator/stats"),
-        fetch("/api/creator/content?limit=5"),
+      const [contentRes, walletRes, linksRes] = await Promise.all([
+        fetch("/api/creator/content?limit=10"),
         fetch("/api/creator/wallet"),
+        fetch("/api/creator/view-once-links"),
       ]);
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (contentRes.ok) { const d = await contentRes.json(); setRecentContent(d.content || []); }
+      if (contentRes.ok) { const d = await contentRes.json(); setContent(d.content || []); }
       if (walletRes.ok) setWalletData(await walletRes.json());
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
+      if (linksRes.ok) { const d = await linksRes.json(); setPayLinks(d.links || []); }
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -104,9 +300,7 @@ export default function CreatorDashboard() {
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    setWithdrawError("");
-    setWithdrawSuccess("");
-    setWithdrawLoading(true);
+    setWithdrawError(""); setWithdrawSuccess(""); setWithdrawLoading(true);
     try {
       const res = await fetch("/api/creator/wallet/withdraw", {
         method: "POST",
@@ -114,12 +308,19 @@ export default function CreatorDashboard() {
         body: JSON.stringify({ amount: parseInt(withdrawAmount), phoneNumber: withdrawPhone }),
       });
       const data = await res.json();
-      if (!res.ok) { setWithdrawError(data.error || "Withdrawal failed"); setWithdrawLoading(false); return; }
-      setWithdrawSuccess(`Withdrawal of ${parseInt(withdrawAmount).toLocaleString()} TZS sent to ${withdrawPhone}. Check your phone!`);
+      if (!res.ok) { setWithdrawError(data.error || "Withdrawal failed"); return; }
+      setWithdrawSuccess(`${parseInt(withdrawAmount).toLocaleString()} TZS sent to ${withdrawPhone}`);
       setWithdrawAmount(""); setWithdrawPhone("");
-      fetchDashboardData();
+      fetchAll();
     } catch { setWithdrawError("An unexpected error occurred"); }
     finally { setWithdrawLoading(false); }
+  };
+
+  const copyLink = (slug: string) => {
+    const url = `${window.location.origin}/v/${slug}`;
+    navigator.clipboard.writeText(url);
+    setCopiedSlug(slug);
+    setTimeout(() => setCopiedSlug(null), 2000);
   };
 
   if (isPending || loading) {
@@ -136,399 +337,517 @@ export default function CreatorDashboard() {
     );
   }
 
+  // Derived data
+  const publishedContent = content.filter((c) => c.status === "published");
+  const linkedContentIds = new Set(payLinks.map((l) => l.content.id));
+  const topLinks = [...payLinks]
+    .sort((a, b) => b.purchaseCount * b.priceTzs - a.purchaseCount * a.priceTzs)
+    .slice(0, 5);
+  const totalLinkRevenue = payLinks.reduce((s, l) => s + l.purchaseCount * l.priceTzs, 0);
+  const totalLinkSales = payLinks.reduce((s, l) => s + l.purchaseCount, 0);
   const visibleTx = showAllTx
     ? walletData?.transactions || []
-    : (walletData?.transactions || []).slice(0, MAX_VISIBLE_TX);
+    : (walletData?.transactions || []).slice(0, 4);
+
+  // Share & Earn section state
+  const hasNoContent = publishedContent.length === 0;
+  const hasContentNoLinks = publishedContent.length > 0 && payLinks.length === 0;
+  const hasLinks = payLinks.length > 0;
 
   return (
     <div className="min-h-screen bg-neutral-950">
-      {/* Tech grid background */}
-      <div className="fixed inset-0 tech-grid opacity-30 pointer-events-none" />
-      <div className="fixed top-0 right-0 w-[400px] h-[400px] bg-amber-500/3 blur-[120px] pointer-events-none" />
+      <div className="fixed inset-0 tech-grid opacity-20 pointer-events-none" />
 
-      {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-56 z-40 flex-col border-r border-white/10 bg-neutral-950/95 backdrop-blur-xl">
-        {/* Brand */}
-        <div className="p-5 border-b border-white/10">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-amber-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-black font-mono font-black text-sm">▶</span>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-10 space-y-5">
+
+        {/* ── Page title ──────────────────────────────────────────── */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <div className="h-px w-4 bg-amber-500/40" />
+              <span className="text-[9px] font-mono text-amber-500/50 tracking-widest uppercase">Creator.Dashboard</span>
             </div>
-            <span className="text-white font-mono font-bold text-sm tracking-widest uppercase italic -skew-x-6 inline-block">PayPerPlay</span>
-          </Link>
-        </div>
-
-        {/* Status */}
-        <div className="px-5 py-3 border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-amber-500 animate-pulse" />
-            <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Creator.Studio</span>
+            <h1 className="text-xl font-bold font-mono tracking-tight text-white">Overview</h1>
           </div>
-        </div>
-
-        <nav className="flex-1 p-3 space-y-0.5">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 text-[11px] font-mono font-semibold uppercase tracking-widest transition-all border-l-2 ${
-                  isActive
-                    ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                    : "border-transparent text-white/40 hover:text-white hover:border-white/20 hover:bg-white/3"
-                }`}
-              >
-                {isActive && <span className="text-amber-500">◈</span>}
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-3 border-t border-white/10">
           <Link
-            href="/feed"
-            className="flex items-center gap-3 px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest text-white/30 hover:text-white hover:bg-white/5 transition-all border-l-2 border-transparent hover:border-white/20"
+            href="/creator/content/new"
+            className="inline-flex h-8 items-center px-4 bg-amber-500 hover:bg-amber-400 text-[10px] font-mono font-bold text-black uppercase tracking-widest transition-colors"
           >
-            Fan View →
+            + Create
           </Link>
         </div>
-      </aside>
 
-      {/* Mobile bottom bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-neutral-950/95 backdrop-blur-xl">
-        <div className="flex items-stretch h-16">
-          {[
-            { href: "/creator/dashboard", label: "DASH" },
-            { href: "/creator/playlists", label: "LISTS" },
-          ].map((item) => (
-            <Link key={item.href} href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center text-[9px] font-mono font-semibold uppercase tracking-wider transition-colors ${
-                pathname === item.href || pathname.startsWith(item.href + "/") ? "text-amber-400" : "text-white/30"
-              }`}
-            >{item.label}</Link>
-          ))}
-          {/* Center FAB */}
-          <div className="flex-1 flex items-center justify-center">
-            <Link href="/creator/content/new"
-              className="w-11 h-11 bg-amber-500 flex items-center justify-center -mt-3 transition-all hover:bg-amber-400 active:scale-95"
-            >
-              <span className="text-black font-mono font-black text-lg">+</span>
-            </Link>
-          </div>
-          {[
-            { href: "/creator/profile", label: "PROFILE" },
-            { href: "/feed", label: "FAN" },
-          ].map((item) => (
-            <Link key={item.href} href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center text-[9px] font-mono font-semibold uppercase tracking-wider transition-colors ${
-                pathname === item.href ? "text-amber-400" : "text-white/30"
-              }`}
-            >{item.label}</Link>
-          ))}
-        </div>
-      </nav>
-
-      {/* Main content */}
-      <div className="lg:ml-56">
-        {/* Header */}
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/95 backdrop-blur-xl">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <div className="h-px w-4 bg-amber-500/40" />
-                  <span className="text-[9px] font-mono text-amber-500/60 tracking-widest uppercase">Creator.Dashboard</span>
+        {/* ── Wallet Strip ─────────────────────────────────────────── */}
+        {walletData && (
+          <div className="border border-amber-500/25 bg-amber-500/[0.04] relative">
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/50" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/50" />
+            <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              {/* Balance */}
+              <div className="flex-1 min-w-0">
+                <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">WALLET.BALANCE</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold font-mono text-white tracking-tight">
+                    {walletData.wallet.balance.toLocaleString()}
+                  </span>
+                  <span className="text-xs font-mono text-white/30">TZS</span>
                 </div>
-                <h1 className="text-lg font-bold font-mono tracking-tight text-white">Overview</h1>
               </div>
+              {/* Earned / Withdrawn */}
+              <div className="flex items-center gap-5 text-[10px] font-mono uppercase tracking-wider">
+                <div>
+                  <span className="text-white/25 block">Earned</span>
+                  <span className="text-green-400 font-semibold">+{walletData.wallet.totalEarned.toLocaleString()} TZS</span>
+                </div>
+                <div className="w-px h-6 bg-white/10" />
+                <div>
+                  <span className="text-white/25 block">Withdrawn</span>
+                  <span className="text-white/50 font-semibold">{walletData.wallet.totalWithdrawn.toLocaleString()} TZS</span>
+                </div>
+                {walletData.wallet.ntzsBalance !== null && (
+                  <>
+                    <div className="w-px h-6 bg-white/10" />
+                    <div>
+                      <span className="text-white/25 block">nTZS On-chain</span>
+                      <span className="text-amber-400 font-semibold">{walletData.wallet.ntzsBalance.toLocaleString()} TZS</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* Withdraw button */}
+              <button
+                onClick={() => { setShowWithdrawModal(true); setWithdrawError(""); setWithdrawSuccess(""); }}
+                disabled={walletData.wallet.balance < 1000}
+                className="flex-shrink-0 h-9 px-5 border border-amber-500/40 bg-amber-500/10 text-[10px] font-mono font-bold text-amber-400 uppercase tracking-widest hover:bg-amber-500/20 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+              >
+                Withdraw →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Share & Earn — the hero section ──────────────────────── */}
+        <div className="border border-white/10 bg-neutral-950 relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
+
+          {/* ── State 1: No published content ── */}
+          {hasNoContent && (
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-[10px] font-mono font-bold">◈</div>
+                <span className="text-[9px] font-mono text-amber-500/60 uppercase tracking-widest">SHARE & EARN — YOUR #1 TOOL</span>
+              </div>
+
+              <h2 className="text-base font-bold font-mono text-white mb-2 leading-snug">
+                This is how you get paid on PayPerPlay
+              </h2>
+              <p className="text-[11px] font-mono text-white/40 leading-relaxed mb-6 max-w-xl">
+                You don't wait for the platform to grow. You bring your own audience. Upload a video,
+                generate a pay link, and post it on TikTok, Instagram, WhatsApp — wherever your fans
+                already are. They pay with M-Pesa. No PayPerPlay account needed.
+              </p>
+
+              {/* Steps */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
+                {[
+                  { n: "01", title: "Upload your content", desc: "Any video, music, or exclusive content you create" },
+                  { n: "02", title: "Generate a pay link", desc: "Set your price and get a shareable link in seconds" },
+                  { n: "03", title: "Share & get paid", desc: "Post on TikTok, WhatsApp, Instagram — fans pay via M-Pesa" },
+                ].map((s) => (
+                  <div key={s.n} className="flex items-start gap-3 p-3 border border-white/5 bg-white/[0.02]">
+                    <div className="w-7 h-7 border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-amber-400 text-[10px] font-mono font-bold flex-shrink-0">
+                      {s.n}
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-mono font-semibold text-white/80">{s.title}</p>
+                      <p className="text-[9px] font-mono text-white/30 mt-0.5 leading-relaxed">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <Link
                 href="/creator/content/new"
-                className="inline-flex h-8 items-center px-4 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
+                className="inline-flex h-9 items-center px-5 bg-amber-500 hover:bg-amber-400 text-[10px] font-mono font-bold text-black uppercase tracking-widest transition-colors"
               >
-                + Create
+                Upload Your First Content →
               </Link>
             </div>
-          </div>
-        </header>
+          )}
 
-        <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-8 space-y-6">
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              { index: "01", label: "Total Content", value: stats?.totalContent || 0 },
-              { index: "02", label: "Published", value: stats?.publishedContent || 0 },
-              { index: "03", label: "Total Views", value: stats?.totalViews || 0 },
-              { index: "04", label: "Total Earnings", value: stats?.totalEarnings || 0, suffix: "TZS" },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="relative border border-white/10 bg-neutral-950 p-4 hover:border-amber-500/20 transition-colors group"
-              >
-                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-1">{stat.index}</div>
-                <div className="text-2xl font-bold font-mono tracking-tight text-white">
-                  {stat.value.toLocaleString()}
-                  {stat.suffix && <span className="text-xs font-normal text-white/30 ml-1">{stat.suffix}</span>}
-                </div>
-                <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider mt-0.5">{stat.label}</div>
+          {/* ── State 2: Has published content, zero pay links ── */}
+          {hasContentNoLinks && (
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-[10px] font-mono font-bold">◈</div>
+                <span className="text-[9px] font-mono text-amber-500/60 uppercase tracking-widest">SHARE & EARN — START HERE</span>
               </div>
-            ))}
-          </div>
 
-          {/* Recent Content */}
-          <div className="border border-white/10 bg-neutral-950 relative">
-            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/30" />
-            <div className="p-5">
+              <h2 className="text-base font-bold font-mono text-white mb-1.5">
+                You have content — now generate pay links to earn
+              </h2>
+              <p className="text-[11px] font-mono text-white/40 mb-5 leading-relaxed max-w-xl">
+                A pay link lets anyone pay to watch your content — directly from a link you share on
+                social media. Set a price, copy the link, post it anywhere. No PayPerPlay account needed
+                to pay.
+              </p>
+
+              <div className="space-y-1.5">
+                {publishedContent.slice(0, 5).map((item) => {
+                  const thumb = item.media?.find((m) => m.mediaType === "thumbnail")?.url;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 p-3 border border-white/5 bg-white/[0.02] hover:border-amber-500/20 hover:bg-amber-500/3 transition-all"
+                    >
+                      <div className="w-9 h-9 flex-shrink-0 bg-white/5 border border-white/5 overflow-hidden">
+                        {thumb ? (
+                          <Image src={thumb} alt={item.title} width={36} height={36} className="object-cover w-full h-full" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/20 font-mono text-sm">▶</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-mono font-semibold text-white/70 truncate">{item.title}</p>
+                        <p className="text-[9px] font-mono text-white/25 uppercase tracking-wider">{item.category}</p>
+                      </div>
+                      <button
+                        onClick={() => setLinkModalContent(item)}
+                        className="flex-shrink-0 h-7 px-3 bg-amber-500 hover:bg-amber-400 text-[9px] font-mono font-bold text-black uppercase tracking-widest transition-colors"
+                      >
+                        Get Pay Link →
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {publishedContent.length > 5 && (
+                <p className="text-[9px] font-mono text-white/25 mt-2 uppercase tracking-wider">
+                  + {publishedContent.length - 5} more — <Link href="/creator/content" className="text-amber-500/60 hover:text-amber-400">view all</Link>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── State 3: Has pay links — show performance ── */}
+          {hasLinks && (
+            <div className="p-6">
+              {/* Header row */}
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">CONTENT.RECENT</div>
-                  <h2 className="text-sm font-semibold font-mono tracking-tight text-white">Recent Content</h2>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-[10px] font-mono font-bold">◈</div>
+                  <div>
+                    <span className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest block">SHARE & EARN</span>
+                    <span className="text-sm font-bold font-mono text-white">Your Pay Links</span>
+                  </div>
                 </div>
                 <Link
-                  href="/creator/content"
-                  className="text-[10px] font-mono text-white/30 uppercase tracking-widest hover:text-amber-400 transition-colors"
+                  href="/creator/share-earn"
+                  className="text-[9px] font-mono text-white/25 uppercase tracking-widest hover:text-amber-400 transition-colors"
                 >
-                  View All →
+                  View All ({payLinks.length}) →
                 </Link>
               </div>
 
-              {recentContent.length === 0 ? (
-                <div className="text-center py-12 border border-dashed border-white/10">
-                  <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest mb-2">NO.CONTENT</p>
-                  <p className="font-mono text-sm text-white/40 mb-4">Start creating exclusive content for your fans</p>
-                  <Link
-                    href="/creator/content/new"
-                    className="inline-flex h-8 items-center px-5 bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
-                  >
-                    Create First Content
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {recentContent.map((item) => {
-                    const thumb = item.media?.find((m) => m.mediaType === "thumbnail")?.url;
-                    return (
-                      <div
-                        key={item.id}
-                        className="group flex items-center gap-4 p-3 border border-white/5 hover:border-amber-500/20 bg-white/[0.01] hover:bg-amber-500/3 transition-all cursor-pointer"
-                        onClick={() => router.push(`/content/${item.id}`)}
-                      >
-                        <div className="relative w-12 h-12 overflow-hidden flex-shrink-0 bg-white/5 border border-white/5">
-                          {thumb ? (
-                            <Image src={thumb} alt={item.title} fill className="object-cover" sizes="48px" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white/20 font-mono text-lg">▶</div>
+              {/* Summary stats */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[
+                  { label: "Active Links", value: payLinks.filter((l) => l.isActive).length },
+                  { label: "Total Sales", value: totalLinkSales },
+                  { label: "Link Revenue", value: `${totalLinkRevenue.toLocaleString()} TZS` },
+                ].map((s) => (
+                  <div key={s.label} className="border border-white/5 bg-white/[0.02] p-3 text-center">
+                    <div className="text-base font-bold font-mono text-amber-400">{s.value}</div>
+                    <div className="text-[9px] font-mono text-white/25 uppercase tracking-wider mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Top links */}
+              <div className="space-y-1.5 mb-4">
+                {topLinks.map((link, i) => {
+                  const earned = link.purchaseCount * link.priceTzs;
+                  return (
+                    <div key={link.id} className="flex items-center gap-3 p-3 border border-white/5 bg-white/[0.02] hover:border-white/10 transition-colors group">
+                      <div className="text-[9px] font-mono text-white/15 w-4 flex-shrink-0">#{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-mono font-semibold text-white/70 truncate group-hover:text-white transition-colors">
+                          {link.content.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-white/30 uppercase tracking-wider">
+                          <span className="text-amber-500/70">{link.priceTzs.toLocaleString()} TZS</span>
+                          <span>·</span>
+                          <span>{link.purchaseCount} paid</span>
+                          {earned > 0 && (
+                            <>
+                              <span>·</span>
+                              <span className="text-green-400/70">+{earned.toLocaleString()} earned</span>
+                            </>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-mono font-medium text-xs text-white/70 truncate group-hover:text-white transition-colors">{item.title}</h3>
-                          <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-white/30 uppercase tracking-wider">
-                            <span>{item.category}</span>
-                            <span>·</span>
-                            <span>{item.viewCount} views</span>
-                            <span>·</span>
-                            <span className="text-amber-500/70">{item.priceTzs === 0 ? "Free" : `${item.priceTzs} TZS`}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`hidden sm:inline px-2 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wider border ${
-                            item.status === "published"
-                              ? "border-green-500/30 bg-green-500/10 text-green-400"
-                              : "border-yellow-500/30 bg-yellow-500/10 text-yellow-400"
-                          }`}>{item.status}</span>
-                          <Link
-                            href={`/creator/content/${item.id}/edit`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/30 hover:text-white hover:border-white/30 transition-all font-mono text-xs"
-                          >✎</Link>
-                        </div>
                       </div>
-                    );
-                  })}
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => copyLink(link.slug)}
+                          className={`h-7 px-3 text-[9px] font-mono font-bold uppercase tracking-widest transition-all border ${
+                            copiedSlug === link.slug
+                              ? "border-green-500/40 bg-green-500/10 text-green-400"
+                              : "border-white/10 text-white/40 hover:border-amber-500/40 hover:text-amber-400 hover:bg-amber-500/5"
+                          }`}
+                        >
+                          {copiedSlug === link.slug ? "✓" : "Copy"}
+                        </button>
+                        <button
+                          onClick={() => window.open(`/v/${link.slug}`, "_blank")}
+                          className="h-7 px-2 border border-white/10 text-[10px] font-mono text-white/30 hover:border-white/25 hover:text-white transition-all"
+                          title="Preview link"
+                        >↗</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Create another link */}
+              {publishedContent.some((c) => !linkedContentIds.has(c.id)) && (
+                <div className="border border-dashed border-white/10 p-3">
+                  <p className="text-[10px] font-mono text-white/30 mb-2">
+                    {publishedContent.filter((c) => !linkedContentIds.has(c.id)).length} content{" "}
+                    item{publishedContent.filter((c) => !linkedContentIds.has(c.id)).length > 1 ? "s" : ""}{" "}
+                    without a pay link yet
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {publishedContent
+                      .filter((c) => !linkedContentIds.has(c.id))
+                      .slice(0, 3)
+                      .map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setLinkModalContent(item)}
+                          className="h-7 px-3 border border-white/10 text-[9px] font-mono text-white/40 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/5 transition-all uppercase tracking-wider truncate max-w-[160px]"
+                        >
+                          + {item.title}
+                        </button>
+                      ))}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Wallet + Transactions */}
-          {walletData && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Balance Card */}
-              <div className="lg:col-span-1 border border-amber-500/20 bg-amber-500/3 relative">
-                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-amber-500/40" />
-                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-amber-500/40" />
-                <div className="p-5">
-                  <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-1">WALLET.BALANCE</div>
-                  <div className="text-3xl font-bold font-mono tracking-tight text-white mb-0.5">
-                    {walletData.wallet.balance.toLocaleString()}
-                    <span className="text-sm font-normal text-white/30 ml-1.5">TZS</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-3 text-[9px] font-mono uppercase tracking-wider">
-                    <div className="flex items-center gap-1 text-green-400/70">
-                      <span>▼</span>
-                      <span>{walletData.wallet.totalEarned.toLocaleString()} earned</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-red-400/70">
-                      <span>▲</span>
-                      <span>{walletData.wallet.totalWithdrawn.toLocaleString()} withdrawn</span>
-                    </div>
-                  </div>
-                  {walletData.wallet.ntzsBalance !== null && (
-                    <div className="mt-3 pt-3 border-t border-white/10">
-                      <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wider">
-                        <span className="text-white/30">nTZS On-chain</span>
-                        <span className="text-amber-400">{walletData.wallet.ntzsBalance.toLocaleString()} TZS</span>
-                      </div>
-                      {walletData.wallet.ntzsWalletAddress && (
-                        <p className="text-[8px] text-white/20 font-mono truncate mt-1">
-                          {walletData.wallet.ntzsWalletAddress}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => { setShowWithdrawModal(true); setWithdrawError(""); setWithdrawSuccess(""); }}
-                    disabled={walletData.wallet.balance < 1000}
-                    className="mt-4 w-full h-9 inline-flex items-center justify-center border border-amber-500/40 bg-amber-500/10 text-[10px] font-mono font-semibold text-amber-400 uppercase tracking-widest hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Withdraw Earnings
-                  </button>
-                </div>
+        {/* ── Recent Content ────────────────────────────────────────── */}
+        <div className="border border-white/10 bg-neutral-950 relative">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/15" />
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">CONTENT.RECENT</div>
+                <h2 className="text-sm font-semibold font-mono text-white">Your Content</h2>
               </div>
-
-              {/* Transactions */}
-              <div className="lg:col-span-2 border border-white/10 bg-neutral-950 relative">
-                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/10" />
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-0.5">TX.RECENT</div>
-                      <h3 className="text-sm font-semibold font-mono text-white">Recent Transactions</h3>
-                    </div>
-                    {walletData.transactions.length > MAX_VISIBLE_TX && (
-                      <button
-                        onClick={() => setShowAllTx(!showAllTx)}
-                        className="text-[10px] font-mono text-white/30 uppercase tracking-widest hover:text-amber-400 transition-colors"
-                      >
-                        {showAllTx ? "Show Less" : `All (${walletData.transactions.length})`}
-                      </button>
-                    )}
-                  </div>
-                  {walletData.transactions.length === 0 ? (
-                    <div className="text-center py-8 border border-dashed border-white/5">
-                      <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">NO.TRANSACTIONS</p>
-                      <p className="text-xs font-mono text-white/30 mt-1">Earnings appear when fans purchase your content</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {visibleTx.map((tx) => (
-                        <div key={tx.id} className="flex items-center justify-between p-2.5 border border-white/5 hover:border-white/10 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 flex items-center justify-center border text-[10px] font-mono ${
-                              tx.type === "earning" ? "border-green-500/30 bg-green-500/10 text-green-400" :
-                              tx.type === "withdrawal" ? "border-red-500/30 bg-red-500/10 text-red-400" :
-                              "border-white/10 text-white/30"
-                            }`}>
-                              {tx.type === "earning" ? "▼" : tx.type === "withdrawal" ? "▲" : "○"}
-                            </div>
-                            <div>
-                              <div className="text-xs font-mono font-semibold text-white/70 capitalize">{tx.type}</div>
-                              <div className="text-[9px] font-mono text-white/30 truncate max-w-[180px] uppercase tracking-wider">
-                                {tx.description || new Date(tx.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                          <div className={`text-sm font-bold font-mono whitespace-nowrap ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
-                            {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} TZS
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center gap-3">
+                <Link href="/creator/content" className="text-[9px] font-mono text-white/25 uppercase tracking-widest hover:text-amber-400 transition-colors">
+                  View All →
+                </Link>
               </div>
             </div>
-          )}
-        </main>
-      </div>
 
-      {/* Withdraw Modal */}
+            {content.length === 0 ? (
+              <div className="text-center py-10 border border-dashed border-white/8">
+                <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest mb-1">NO.CONTENT.YET</p>
+                <p className="text-xs font-mono text-white/35 mb-4">Upload your first video or audio to start earning</p>
+                <Link
+                  href="/creator/content/new"
+                  className="inline-flex h-8 items-center px-5 bg-amber-500 hover:bg-amber-400 text-[10px] font-mono font-bold text-black uppercase tracking-widest transition-colors"
+                >
+                  Create Content
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {content.map((item) => {
+                  const thumb = item.media?.find((m) => m.mediaType === "thumbnail")?.url;
+                  const hasLink = linkedContentIds.has(item.id);
+                  const itemLinks = payLinks.filter((l) => l.content.id === item.id);
+                  const itemEarned = itemLinks.reduce((s, l) => s + l.purchaseCount * l.priceTzs, 0);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="group flex items-center gap-3 p-2.5 border border-white/5 hover:border-white/10 bg-white/[0.01] hover:bg-white/[0.03] transition-all"
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative w-10 h-10 flex-shrink-0 bg-white/5 border border-white/5 overflow-hidden">
+                        {thumb ? (
+                          <Image src={thumb} alt={item.title} fill className="object-cover" sizes="40px" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/20 font-mono">▶</div>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono font-medium text-xs text-white/65 truncate group-hover:text-white/85 transition-colors">
+                          {item.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-white/25 uppercase tracking-wider">
+                          <span>{item.category}</span>
+                          <span>·</span>
+                          <span className={item.status === "published" ? "text-green-400/60" : "text-yellow-400/60"}>
+                            {item.status}
+                          </span>
+                          {itemEarned > 0 && (
+                            <>
+                              <span>·</span>
+                              <span className="text-green-400/70">+{itemEarned.toLocaleString()} TZS</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {item.status === "published" ? (
+                          hasLink ? (
+                            <button
+                              onClick={() => {
+                                const link = itemLinks[0];
+                                if (link) copyLink(link.slug);
+                              }}
+                              className={`h-7 px-2.5 text-[9px] font-mono font-semibold uppercase tracking-widest border transition-all ${
+                                itemLinks[0] && copiedSlug === itemLinks[0].slug
+                                  ? "border-green-500/40 bg-green-500/10 text-green-400"
+                                  : "border-amber-500/25 bg-amber-500/8 text-amber-400/80 hover:bg-amber-500/15 hover:border-amber-500/40"
+                              }`}
+                            >
+                              {itemLinks[0] && copiedSlug === itemLinks[0].slug ? "✓ Copied" : "Copy Link"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setLinkModalContent(item)}
+                              className="h-7 px-2.5 text-[9px] font-mono font-semibold uppercase tracking-widest border border-white/10 text-white/35 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/5 transition-all"
+                            >
+                              + Pay Link
+                            </button>
+                          )
+                        ) : (
+                          <span className="text-[9px] font-mono text-white/15 uppercase tracking-wider px-2">Draft</span>
+                        )}
+                        <Link
+                          href={`/creator/content/${item.id}/edit`}
+                          className="w-7 h-7 flex items-center justify-center border border-white/8 text-white/25 hover:text-white/60 hover:border-white/20 transition-all font-mono text-xs"
+                        >✎</Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Transactions ─────────────────────────────────────────── */}
+        {walletData && walletData.transactions.length > 0 && (
+          <div className="border border-white/8 bg-neutral-950 relative">
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/10" />
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-[9px] font-mono text-white/15 uppercase tracking-widest mb-0.5">TX.HISTORY</div>
+                  <h3 className="text-sm font-semibold font-mono text-white/70">Transactions</h3>
+                </div>
+                {walletData.transactions.length > 4 && (
+                  <button
+                    onClick={() => setShowAllTx(!showAllTx)}
+                    className="text-[9px] font-mono text-white/25 uppercase tracking-widest hover:text-amber-400 transition-colors"
+                  >
+                    {showAllTx ? "Show Less" : `All (${walletData.transactions.length})`}
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1">
+                {visibleTx.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-2.5 border border-white/5 hover:border-white/8 transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-5 h-5 flex items-center justify-center border text-[9px] font-mono ${
+                        tx.type === "earning" ? "border-green-500/25 bg-green-500/8 text-green-400" :
+                        tx.type === "withdrawal" ? "border-red-500/25 bg-red-500/8 text-red-400" :
+                        "border-white/8 text-white/25"
+                      }`}>
+                        {tx.type === "earning" ? "▼" : tx.type === "withdrawal" ? "▲" : "○"}
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-mono font-semibold text-white/60 capitalize">{tx.type}</div>
+                        <div className="text-[9px] font-mono text-white/25 truncate max-w-[180px] uppercase tracking-wider">
+                          {tx.description || new Date(tx.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`text-sm font-bold font-mono ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
+                      {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} TZS
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* ── Pay Link Modal ───────────────────────────────────────── */}
+      {linkModalContent && (
+        <QuickLinkModal
+          content={linkModalContent}
+          onClose={() => setLinkModalContent(null)}
+          onCreated={(newLink) => {
+            setPayLinks((prev) => [newLink, ...prev]);
+            // Don't close — let them copy the link first
+          }}
+        />
+      )}
+
+      {/* ── Withdraw Modal ───────────────────────────────────────── */}
       {showWithdrawModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)} />
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)} />
           <div className="relative w-full max-w-md mx-4 border border-white/15 bg-neutral-950 overflow-hidden">
             <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/50" />
             <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/50" />
             <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/50" />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/50" />
-
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <div className="text-[9px] font-mono text-amber-500/50 uppercase tracking-widest mb-0.5">WALLET.WITHDRAW</div>
                   <h3 className="text-base font-bold font-mono text-white tracking-tight">Withdraw Earnings</h3>
                 </div>
-                <button
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all font-mono"
-                >×</button>
+                <button onClick={() => setShowWithdrawModal(false)} className="w-7 h-7 flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all font-mono text-base">×</button>
               </div>
 
               {withdrawSuccess ? (
                 <div className="text-center py-6">
                   <div className="w-12 h-12 mx-auto mb-4 border border-green-500/30 bg-green-500/10 flex items-center justify-center text-green-400 font-mono text-xl">✓</div>
                   <p className="text-sm font-mono text-green-400">{withdrawSuccess}</p>
-                  <button
-                    onClick={() => setShowWithdrawModal(false)}
-                    className="mt-5 inline-flex h-9 items-center px-6 border border-white/15 text-[10px] font-mono text-white/60 uppercase tracking-widest hover:border-white/30 hover:text-white transition-all"
-                  >Done</button>
+                  <p className="text-[10px] font-mono text-white/30 mt-1">Check your phone for the M-Pesa prompt</p>
+                  <button onClick={() => setShowWithdrawModal(false)} className="mt-5 inline-flex h-9 items-center px-6 border border-white/15 text-[10px] font-mono text-white/60 uppercase tracking-widest hover:border-white/30 hover:text-white transition-all">Done</button>
                 </div>
               ) : (
                 <form onSubmit={handleWithdraw} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Amount (TZS)</label>
-                    <Input
-                      type="number"
-                      placeholder="5,000"
-                      min={5000}
-                      max={walletData?.wallet.balance || 0}
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      required
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50"
-                    />
-                    <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">
-                      Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 5,000 TZS
-                    </p>
+                    <Input type="number" placeholder="5,000" min={5000} max={walletData?.wallet.balance || 0} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} required className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50" />
+                    <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">Available: {walletData?.wallet.balance.toLocaleString()} TZS · Min: 5,000 TZS</p>
                   </div>
-
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Mobile Money Number</label>
-                    <Input
-                      type="tel"
-                      placeholder="0712345678"
-                      value={withdrawPhone}
-                      onChange={(e) => setWithdrawPhone(e.target.value)}
-                      required
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50"
-                    />
+                    <Input type="tel" placeholder="0712345678" value={withdrawPhone} onChange={(e) => setWithdrawPhone(e.target.value)} required className="bg-white/5 border-white/10 text-white placeholder:text-white/20 font-mono text-sm rounded-none focus:border-amber-500/50" />
                     <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">M-Pesa, Airtel Money, Mixx by Yas, or HaloPesa</p>
                   </div>
-
-                  {withdrawError && (
-                    <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[11px] font-mono">
-                      {withdrawError}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={withdrawLoading || !withdrawAmount || !withdrawPhone}
-                    className="w-full h-10 inline-flex items-center justify-center bg-amber-500 text-[10px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
+                  {withdrawError && <div className="p-3 border border-red-500/20 bg-red-500/5 text-red-400 text-[10px] font-mono">{withdrawError}</div>}
+                  <button type="submit" disabled={withdrawLoading || !withdrawAmount || !withdrawPhone} className="w-full h-10 inline-flex items-center justify-center bg-amber-500 text-[10px] font-mono font-bold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {withdrawLoading ? "Processing..." : `Withdraw ${withdrawAmount ? `${parseInt(withdrawAmount).toLocaleString()} TZS` : ""}`}
                   </button>
                 </form>
