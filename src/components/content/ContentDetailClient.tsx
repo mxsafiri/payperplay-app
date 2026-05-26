@@ -244,7 +244,8 @@ export function ContentDetailClient({
 
   const youtubeMedia = content.media.find((m) => m.mediaType === "youtube");
   const embedUrl = youtubeMedia?.url ? getYouTubeEmbedUrl(youtubeMedia.url) : null;
-  const isUpload = content.contentType === "upload";
+  const isAudio = content.contentType === "audio_upload";
+  const isUpload = content.contentType === "upload" || isAudio;
   const thumbnailMedia = content.media.find((m) => m.mediaType === "thumbnail");
 
   return (
@@ -273,7 +274,41 @@ export function ContentDetailClient({
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-5">
             {/* Video Player */}
-            {content.hasAccess && isUpload && streamUrl ? (
+            {content.hasAccess && isAudio && streamUrl ? (
+              <div className="overflow-hidden bg-black border border-white/10 p-6 flex flex-col items-center gap-4">
+                {thumbnailMedia?.url && (
+                  <div className="relative w-28 h-28 overflow-hidden border border-white/10 flex-shrink-0">
+                    <Image src={thumbnailMedia.url} alt={content.title} fill className="object-cover" sizes="112px" />
+                  </div>
+                )}
+                <div className="text-center">
+                  <p className="text-sm font-mono font-semibold text-white">{content.title}</p>
+                  <p className="text-[10px] font-mono text-white/40 mt-0.5">{content.creator.displayName || `@${content.creator.handle}`}</p>
+                </div>
+                <audio
+                  src={streamUrl}
+                  controls
+                  preload="metadata"
+                  className="w-full"
+                  controlsList="nodownload"
+                />
+                {!showTipPanel && (
+                  <button
+                    onClick={() => setShowTipPanel(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-white text-[11px] font-mono uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-colors border border-white/10 hover:border-amber-500"
+                  >
+                    ◈ Tip
+                  </button>
+                )}
+                <TipPanel
+                  contentId={contentId}
+                  creatorName={content.creator.displayName || `@${content.creator.handle}`}
+                  walletBalance={walletBalance}
+                  isOpen={showTipPanel}
+                  onClose={() => setShowTipPanel(false)}
+                />
+              </div>
+            ) : content.hasAccess && isUpload && streamUrl ? (
               <div className="relative aspect-video overflow-hidden bg-black border border-white/10">
                 <video
                   src={streamUrl}

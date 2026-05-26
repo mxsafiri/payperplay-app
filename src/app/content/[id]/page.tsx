@@ -56,7 +56,8 @@ export default async function ContentDetailPage({
     }
   }
 
-  const isUpload = contentItem.contentType === "upload";
+  const isAudio = contentItem.contentType === "audio_upload";
+  const isUpload = contentItem.contentType === "upload" || isAudio;
 
   // Resolve thumbnail presigned URLs
   const resolvedMedia = await Promise.all(
@@ -78,25 +79,28 @@ export default async function ContentDetailPage({
 
   const avatarUrl = await resolveAvatarUrl(contentItem.creator?.avatarUrl);
 
-  const videoMedia = resolvedMedia.find((m) => m.mediaType === "video" && m.storageKey);
+  // Find primary media — audio files use mediaType "audio", video uses "video"
+  const primaryMedia = resolvedMedia.find(
+    (m) => m.mediaType === (isAudio ? "audio" : "video") && m.storageKey
+  );
 
-  // Generate stream URL server-side — video src is in the HTML, no client round-trip
+  // Generate stream URL server-side — src is in the HTML, no client round-trip
   let streamUrl: string | null = null;
   let previewUrl: string | null = null;
 
-  if (isUpload && videoMedia?.storageKey) {
+  if (isUpload && primaryMedia?.storageKey) {
     if (hasAccess && profile) {
       try {
         streamUrl = await getPresignedReadUrl({
-          key: videoMedia.storageKey,
+          key: primaryMedia.storageKey,
           expiresInSeconds: 3600,
         });
       } catch { /* non-fatal — client can retry */ }
-    } else if (!hasAccess && contentItem.priceTzs > 0) {
-      // Preview URL for paid content without access
+    } else if (!hasAccess && !isAudio && contentItem.priceTzs > 0) {
+      // Video-only preview for paid content without access (audio has no preview)
       try {
         previewUrl = await getPresignedReadUrl({
-          key: videoMedia.storageKey,
+          key: primaryMedia.storageKey,
           expiresInSeconds: 3600,
         });
       } catch { /* non-fatal */ }
