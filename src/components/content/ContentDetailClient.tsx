@@ -4,8 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
+import { collectDeviceSignals } from "@/lib/fingerprint";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { placeholderCreators } from "@/data/placeholder-creators";
 import { InteractionBar } from "@/components/content/InteractionBar";
 import { CommentSection } from "@/components/content/CommentSection";
@@ -84,6 +84,12 @@ export function ContentDetailClient({
   const [showComments, setShowComments] = useState(false);
   const [showTipPanel, setShowTipPanel] = useState(false);
 
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestPayState, setGuestPayState] = useState<"idle" | "submitting" | "polling" | "success" | "error">("idle");
+  const [guestError, setGuestError] = useState("");
+  const [guestInstructions, setGuestInstructions] = useState("");
+  const guestPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     if (!session) return;
     fetch("/api/wallet")
@@ -157,6 +163,66 @@ export function ContentDetailClient({
       setPaymentLoading(false);
     }
   };
+
+  useEffect(() => {
+    return () => { if (guestPollRef.current) clearInterval(guestPollRef.current); };
+  }, []);
+
+  const handleGuestPayment = useCallback(async (e: { preventDefault(): void }) => {
+    e.preventDefault();
+    if (!guestPhone.trim()) { setGuestError("Enter your phone number"); return; }
+    setGuestError(""); setGuestPayState("submitting");
+    const fingerprint = collectDeviceSignals(contentId);
+    try {
+      const res = await fetch(`/api/content/${contentId}/pay-guest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: guestPhone.trim(), deviceFingerprint: fingerprint }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setGuestError(data.error || "Payment failed"); setGuestPayState("error"); return; }
+      setGuestInstructions(data.instructions || "Check your phone for the M-Pesa prompt");
+      setGuestPayState("polling");
+      const { slug, purchaseId, depositId } = data as { slug: string; purchaseId: string; depositId: string };
+      let attempts = 0;
+      guestPollRef.current = setInterval(async () => {
+        attempts++;
+        if (attempts >= 60) {
+          if (guestPollRef.current) clearInterval(guestPollRef.current);
+          setGuestError("Payment timed out. Please try again.");
+          setGuestPayState("error");
+          return;
+        }
+        try {
+          const vRes = await fetch(`/api/view-once/${slug}/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ purchaseId, depositId }),
+          });
+          const vData = await vRes.json();
+          if (vData.status === "paid") {
+            if (guestPollRef.current) clearInterval(guestPollRef.current);
+            setGuestPayState("success");
+            const streamRes = await fetch(`/api/view-once/${slug}/stream?pid=${purchaseId}`, {
+              headers: { "x-device-fingerprint": fingerprint },
+            });
+            if (streamRes.ok) {
+              const streamData = await streamRes.json();
+              if (streamData.type === "upload") setStreamUrl(streamData.url);
+            }
+            setContent((c) => ({ ...c, hasAccess: true }));
+          } else if (vData.status === "failed") {
+            if (guestPollRef.current) clearInterval(guestPollRef.current);
+            setGuestError(vData.error || "Payment failed");
+            setGuestPayState("error");
+          }
+        } catch { /* network hiccup — keep polling */ }
+      }, 5000);
+    } catch {
+      setGuestError("Something went wrong. Please try again.");
+      setGuestPayState("error");
+    }
+  }, [guestPhone, contentId]);
 
   const handlePreviewTimeUpdate = useCallback(() => {
     const video = previewVideoRef.current;
@@ -504,10 +570,72 @@ export function ContentDetailClient({
 
                   {!session ? (
                     <div className="space-y-3">
-                      <p className="text-[10px] font-mono text-white/30">Sign in to unlock this content</p>
-                      <Button className="w-full" onClick={() => router.push("/login")}>
-                        Sign In
-                      </Button>
+                      {guestPayState === "success" ? (
+                        <div className="p-4 border border-green-500/20 bg-green-500/5 text-center relative">
+                          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-green-500/40" />
+                          <p className="text-2xl mb-1 text-green-400 font-mono">✓</p>
+                          <p className="text-xs font-mono text-green-400 font-semibold uppercase tracking-wider">Payment confirmed!</p>
+                          <p className="text-[10px] font-mono text-white/30 mt-1">Content unlocked</p>
+                        </div>
+                      ) : guestPayState === "polling" ? (
+                        <div className="p-4 border border-amber-500/20 bg-amber-500/5 text-center">
+                          <div className="relative w-8 h-8 mx-auto mb-3">
+                            <div className="absolute inset-0 border border-amber-500/30 animate-spin" />
+                            <div className="absolute inset-1.5 border border-amber-500/50 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1s" }} />
+                          </div>
+                          <p className="text-[11px] font-mono text-amber-400 font-semibold uppercase tracking-wider mb-1">Check your phone</p>
+                          <p className="text-[10px] font-mono text-white/40">{guestInstructions}</p>
+                          <p className="text-[9px] font-mono text-white/20 mt-2 uppercase tracking-wider">Enter your M-Pesa PIN to confirm</p>
+                          <button
+                            onClick={() => { if (guestPollRef.current) clearInterval(guestPollRef.current); setGuestPayState("idle"); }}
+                            className="mt-3 text-[9px] font-mono text-white/20 hover:text-white/40 uppercase tracking-widest transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleGuestPayment} className="space-y-3">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-mono text-white/30 uppercase tracking-widest">Phone (M-Pesa)</label>
+                            <div className="flex items-center border border-white/10 bg-white/[0.03] focus-within:border-amber-500/40 transition-colors">
+                              <span className="text-[10px] font-mono text-white/30 pl-3 pr-1 whitespace-nowrap">+255</span>
+                              <input
+                                type="tel"
+                                value={guestPhone}
+                                onChange={(e) => setGuestPhone(e.target.value)}
+                                placeholder="7XX XXX XXX"
+                                className="flex-1 bg-transparent px-2 py-2.5 text-white text-[11px] font-mono outline-none placeholder:text-white/20"
+                                maxLength={12}
+                                disabled={guestPayState === "submitting"}
+                              />
+                            </div>
+                          </div>
+                          {guestError && (
+                            <p className="text-[10px] font-mono text-red-400">{guestError}</p>
+                          )}
+                          <button
+                            type="submit"
+                            disabled={guestPayState === "submitting"}
+                            className="w-full inline-flex h-10 items-center justify-center bg-amber-500 text-[11px] font-mono font-semibold text-black uppercase tracking-widest hover:bg-amber-400 transition-colors disabled:opacity-50"
+                          >
+                            {guestPayState === "submitting" ? "Sending prompt..." : `Pay ${content.priceTzs.toLocaleString()} TZS via M-Pesa`}
+                          </button>
+                          <div className="flex items-center justify-center gap-3 pt-1">
+                            <span className="text-[9px] font-mono text-white/20">🔒 Secure</span>
+                            <span className="text-[9px] font-mono text-white/20">⚡ Instant</span>
+                            <span className="text-[9px] font-mono text-white/20">📱 No account needed</span>
+                          </div>
+                          <div className="pt-1 border-t border-white/5 text-center">
+                            <p className="text-[9px] font-mono text-white/20 uppercase tracking-wider">
+                              Or{" "}
+                              <button type="button" onClick={() => router.push("/login")} className="text-amber-500/60 hover:text-amber-400 transition-colors">
+                                sign in
+                              </button>
+                              {" "}to pay from wallet
+                            </p>
+                          </div>
+                        </form>
+                      )}
                     </div>
                   ) : paymentSuccess ? (
                     <div className="p-4 border border-green-500/20 bg-green-500/5 text-center relative">
