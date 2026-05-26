@@ -10,6 +10,7 @@ import { placeholderCreators } from "@/data/placeholder-creators";
 import { InteractionBar } from "@/components/content/InteractionBar";
 import { CommentSection } from "@/components/content/CommentSection";
 import { TipPanel } from "@/components/content/TipPanel";
+import { AudioPlayer } from "@/components/content/AudioPlayer";
 
 interface ContentDetail {
   id: string;
@@ -275,29 +276,19 @@ export function ContentDetailClient({
           <div className="lg:col-span-2 space-y-5">
             {/* Video Player */}
             {content.hasAccess && isAudio && streamUrl ? (
-              <div className="overflow-hidden bg-black border border-white/10 p-6 flex flex-col items-center gap-4">
-                {thumbnailMedia?.url && (
-                  <div className="relative w-28 h-28 overflow-hidden border border-white/10 flex-shrink-0">
-                    <Image src={thumbnailMedia.url} alt={content.title} fill className="object-cover" sizes="112px" />
-                  </div>
-                )}
-                <div className="text-center">
-                  <p className="text-sm font-mono font-semibold text-white">{content.title}</p>
-                  <p className="text-[10px] font-mono text-white/40 mt-0.5">{content.creator.displayName || `@${content.creator.handle}`}</p>
-                </div>
-                <audio
+              <div className="space-y-2">
+                <AudioPlayer
                   src={streamUrl}
-                  controls
-                  preload="metadata"
-                  className="w-full"
-                  controlsList="nodownload"
+                  title={content.title}
+                  artist={content.creator.displayName || `@${content.creator.handle}`}
+                  albumArt={thumbnailMedia?.url ?? null}
                 />
                 {!showTipPanel && (
                   <button
                     onClick={() => setShowTipPanel(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-white text-[11px] font-mono uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-colors border border-white/10 hover:border-amber-500"
+                    className="w-full flex items-center justify-center gap-1.5 h-8 border border-white/10 text-[10px] font-mono text-white/30 uppercase tracking-widest hover:border-amber-500/30 hover:text-amber-500 transition-all"
                   >
-                    ◈ Tip
+                    ◈ Tip Creator
                   </button>
                 )}
                 <TipPanel
@@ -365,7 +356,7 @@ export function ContentDetailClient({
                     <div className="absolute inset-0 border border-amber-500/30 animate-spin" style={{ animationDuration: '2s' }} />
                     <div className="absolute inset-2 border border-amber-500/50 animate-spin" style={{ animationDuration: '1s', animationDirection: 'reverse' }} />
                   </div>
-                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest animate-pulse">Loading video...</p>
+                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest animate-pulse">{isAudio ? "Loading audio..." : "Loading video..."}</p>
                 </div>
               </div>
             ) : !content.hasAccess && isUpload && previewUrl ? (
