@@ -104,13 +104,13 @@ class NtzsClient {
 
   readonly users = {
     create: (params: { externalId: string; email: string; phone?: string }): Promise<NtzsUser> => {
-      return this.request<NtzsUser>("POST", "/api/v1/users", params);
+      return this.request<NtzsUser>("POST", "/api/v1/partners/users", params);
     },
     get: (userId: string): Promise<NtzsUserWithBalance> => {
-      return this.request<NtzsUserWithBalance>("GET", `/api/v1/users/${userId}`);
+      return this.request<NtzsUserWithBalance>("GET", `/api/v1/partners/users/${userId}`);
     },
     getBalance: async (userId: string): Promise<{ balanceTzs: number; walletAddress: string }> => {
-      const u = await this.request<NtzsUserWithBalance>("GET", `/api/v1/users/${userId}`);
+      const u = await this.request<NtzsUserWithBalance>("GET", `/api/v1/partners/users/${userId}`);
       return { balanceTzs: u.balanceTzs, walletAddress: u.walletAddress || "" };
     },
   };

@@ -145,7 +145,16 @@ export async function POST(req: NextRequest) {
             { status: 402 }
           );
         }
-        return NextResponse.json({ error: `Payment failed: ${msg}` }, { status: 500 });
+        if (msg.toLowerCase().includes("no wallet") || msg.toLowerCase().includes("has no wallet")) {
+          // Fan's nTZS user was created without a wallet (old /api/v1/users endpoint).
+          // Clear the stored ID so ensureNtzsWallet re-provisions via the correct endpoint next attempt.
+          await db.update(profiles).set({ ntzsUserId: null, ntzsWalletAddress: null }).where(eq(profiles.id, profile.id));
+          return NextResponse.json(
+            { error: "Your wallet is being set up — this takes a moment. Please try again shortly." },
+            { status: 503 }
+          );
+        }
+        return NextResponse.json({ error: "Payment failed. Please try again or contact support." }, { status: 500 });
       }
     } else {
       // Creator not on nTZS yet — record locally
@@ -204,9 +213,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Payment initiation error:", error);
-    const message = error instanceof NtzsApiError
-      ? `Payment failed: ${error.message}`
-      : "Failed to initiate payment";
+    const message = "Payment failed. Please try again or contact support.";
     return NextResponse.json(
       { error: message },
       { status: 500 }
