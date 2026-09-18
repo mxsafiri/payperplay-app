@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { count, eq, desc, sql } from "drizzle-orm";
+import { count, eq, desc, sql, isNotNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { profiles, creatorWallets } from "@/db/schema";
@@ -33,7 +33,7 @@ function formatCount(n: number): string {
 }
 
 export default async function DashboardPage() {
-  const [[{ total: totalUsers }], [{ total: totalCreators }], topEarners] = await Promise.all([
+  const [[{ total: totalUsers }], [{ total: totalCreators }], topEarners, rawFeatured] = await Promise.all([
     db.select({ total: count() }).from(profiles),
     db.select({ total: count() }).from(profiles).where(eq(profiles.role, "creator")),
     db
@@ -48,11 +48,33 @@ export default async function DashboardPage() {
       .innerJoin(profiles, eq(profiles.id, creatorWallets.creatorId))
       .orderBy(desc(creatorWallets.totalEarned))
       .limit(3),
+    // Featured creators for hero — top earners with avatars
+    db
+      .select({
+        id: profiles.id,
+        handle: profiles.handle,
+        displayName: profiles.displayName,
+        avatarUrl: profiles.avatarUrl,
+        totalEarned: creatorWallets.totalEarned,
+      })
+      .from(creatorWallets)
+      .innerJoin(profiles, eq(profiles.id, creatorWallets.creatorId))
+      .where(isNotNull(profiles.avatarUrl))
+      .orderBy(desc(creatorWallets.totalEarned))
+      .limit(6),
   ]);
 
-  const resolvedEarners = await Promise.all(
-    topEarners.map(async (c) => ({ ...c, avatarUrl: await resolveAvatarUrl(c.avatarUrl) }))
-  );
+  const [resolvedEarners, resolvedFeaturedRaw] = await Promise.all([
+    Promise.all(topEarners.map(async (c) => ({ ...c, avatarUrl: await resolveAvatarUrl(c.avatarUrl) }))),
+    Promise.all(rawFeatured.map(async (c) => ({
+      id: c.id,
+      name: c.displayName || `@${c.handle}`,
+      handle: `@${c.handle}`,
+      image: (await resolveAvatarUrl(c.avatarUrl)) ?? "",
+      earnings: c.totalEarned,
+    }))),
+  ]);
+  const resolvedFeatured = resolvedFeaturedRaw.filter((c) => c.image !== "");
 
   const liveStats = [
     { metric: formatCount(totalCreators), label: "Creators", icon: "🔥" },
@@ -63,7 +85,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <DashboardNav links={dashboardNavLinks} />
 
-      <HeroSection />
+      <HeroSection featuredCreators={resolvedFeatured} />
       <StatsCollage stats={liveStats} />
 
       <LeaderboardSection topEarners={resolvedEarners} />

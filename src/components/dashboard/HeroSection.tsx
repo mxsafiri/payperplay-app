@@ -8,14 +8,30 @@ import { Container } from "./Container";
 import { Typewriter } from "@/components/ui/typewriter";
 import { placeholderCreators } from "@/data/placeholder-creators";
 
+interface FeaturedCreator {
+  id: string;
+  name: string;
+  handle: string;
+  image: string;
+  earnings?: number;
+}
+
 function anim(cls: string, delay: number) {
   return { className: cls, style: { animationDelay: `${delay}ms` } };
 }
 
 const IMAGE_HOLD_MS = 4000;
 
-export function HeroSection() {
-  const featuredCreators = placeholderCreators.slice(0, 6);
+export function HeroSection({ featuredCreators: realCreators = [] }: { featuredCreators?: FeaturedCreator[] }) {
+  const placeholders = placeholderCreators.slice(0, 6).map((c) => ({
+    id: c.id,
+    name: c.name,
+    handle: c.handle,
+    image: c.image,
+  }));
+  const featuredCreators = realCreators.length >= 6
+    ? realCreators
+    : [...realCreators, ...placeholders.slice(realCreators.length)];
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showVideo, setShowVideo] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,7 +190,7 @@ export function HeroSection() {
                 <div className="absolute top-1.5 right-1.5 w-3 h-3 border-t border-r border-amber-500/60 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="absolute bottom-0 left-0 right-0 p-2">
                   <p className="text-[10px] font-mono font-semibold text-white truncate">{creator.name}</p>
-                  <p className="text-[9px] font-mono text-white/50">{creator.followers}</p>
+                  <p className="text-[9px] font-mono text-white/50">{creator.handle}</p>
                 </div>
               </div>
             ))}
